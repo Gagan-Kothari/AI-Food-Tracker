@@ -8,8 +8,32 @@ from sqlalchemy.orm import Session
 from app.models import models
 from datetime import datetime, timedelta
 from app.crud.inventory_crud import user_inventory
+import re
 
 load_dotenv()
+
+# Synonym mapping for better recipe matching
+# Maps specific terms to their broader categories
+SYNONYMS = {
+    "wheat flour": ["flour", "wheat", "all-purpose flour"],
+    "flour": ["wheat flour", "all-purpose flour"],
+    "rice": ["white rice", "brown rice", "basmati rice"],
+    "oil": ["cooking oil", "vegetable oil", "sunflower oil", "olive oil"],
+    "milk": ["whole milk", "skim milk", "dairy milk"],
+    "cheese": ["cheddar cheese", "mozzarella", "gouda"],
+    "bread": ["white bread", "whole wheat bread", "sliced bread"],
+    "chicken": ["chicken breast", "chicken thigh", "whole chicken"],
+    "tomato": ["tomatoes", "cherry tomato", "roma tomato"],
+    "onion": ["onions", "yellow onion", "red onion"],
+    "garlic": ["garlic cloves", "minced garlic"],
+    "sugar": ["white sugar", "granulated sugar"],
+    "salt": ["table salt", "sea salt"],
+    "butter": ["unsalted butter", "salted butter"],
+    "egg": ["eggs", "chicken egg"],
+    "potato": ["potatoes", "russet potato", "red potato"],
+    "carrot": ["carrots", "baby carrot"],
+    "pepper": ["bell pepper", "black pepper", "red pepper"],
+}
 
 SPOONACULAR_API = "https://api.spoonacular.com/recipes/findByIngredients"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
@@ -109,22 +133,38 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         
         # Extract ingredient names for API call
         # Use category if categorystatus is true, otherwise use f_name
+        # Add synonyms for better recipe matching
         # Filter out empty strings and None values
         ingredients = []
+        ingredients_set = set()  # Use set to avoid duplicates
+        
         for item in inventory_data:
             categorystatus = item.get("categorystatus", False)
+            base_ingredient = None
+            
             if categorystatus:
                 # Use category if categorystatus is true
                 category = item.get("category", "")
                 if category and isinstance(category, str) and category.strip():
-                    ingredients.append(category.strip())
+                    base_ingredient = category.strip().lower()
             else:
                 # Use f_name if categorystatus is false
                 f_name = item.get("f_name", "")
                 if f_name and isinstance(f_name, str) and f_name.strip():
-                    ingredients.append(f_name.strip())
+                    base_ingredient = f_name.strip().lower()
+            
+            if base_ingredient:
+                # Add the base ingredient
+                ingredients_set.add(base_ingredient)
+                
+                # Add synonyms if available
+                for key, synonyms in SYNONYMS.items():
+                    if key.lower() in base_ingredient or base_ingredient in key.lower():
+                        for synonym in synonyms:
+                            ingredients_set.add(synonym.lower())
         
-        print(f"DEBUG: Extracted {len(ingredients)} valid ingredients: {ingredients[:5]}")
+        ingredients = list(ingredients_set)
+        print(f"DEBUG: Extracted {len(ingredients)} valid ingredients (with synonyms): {ingredients[:10]}")
         
         if not ingredients:
             return {
@@ -187,10 +227,34 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 used_ing_enhanced = used_ing.copy()
                 
                 # Find matching inventory item
+                # Try exact match first, then partial match, then synonym match
                 inventory_match = None
+                inventory_items = []
+                
+                # 1. Try exact match
                 if ing_name in inventory_map:
-                    # Use the first match, or find the one expiring soonest
                     inventory_items = inventory_map[ing_name]
+                else:
+                    # 2. Try partial match (ingredient name contains inventory name or vice versa)
+                    for map_key, items in inventory_map.items():
+                        if map_key in ing_name or ing_name in map_key:
+                            inventory_items.extend(items)
+                            break
+                    
+                    # 3. Try synonym match
+                    if not inventory_items:
+                        for key, synonyms in SYNONYMS.items():
+                            if ing_name in key or key in ing_name:
+                                # Check if any synonym matches our inventory
+                                for synonym in synonyms:
+                                    if synonym.lower() in inventory_map:
+                                        inventory_items.extend(inventory_map[synonym.lower()])
+                                        break
+                                # Also check if the key itself is in inventory
+                                if key.lower() in inventory_map:
+                                    inventory_items.extend(inventory_map[key.lower()])
+                
+                if inventory_items:
                     # Sort by expiry date (soonest first)
                     inventory_items_sorted = sorted(
                         inventory_items,
