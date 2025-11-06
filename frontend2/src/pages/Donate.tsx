@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { apiService } from "../services/api"
 import { HeartIcon, CheckCircleIcon } from "@heroicons/react/24/outline"
@@ -24,6 +25,7 @@ interface NGO {
 
 export default function Donate() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [eligibleItems, setEligibleItems] = useState<DonationItem[]>([])
   const [selectedNGO, setSelectedNGO] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -127,10 +129,13 @@ export default function Donate() {
           
           if (countdown <= 0) {
             clearInterval(countdownInterval)
+            // Reset success state and refresh the eligible items list
+            setSuccess(false)
+            setRedirectCountdown(3)
             // Refresh the eligible items list
             fetchEligibleItems()
-            // Trigger a page reload to update navbar points
-            window.location.reload()
+            // Navigate to the same page to refresh navbar points without full reload
+            navigate('/donate', { replace: true })
           }
         }, 1000)
       } else {
