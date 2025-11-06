@@ -223,11 +223,13 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             items_expiring_soon = 0  # Items expiring in 7 days or less
             
             for used_ing in recipe.get("usedIngredients", []):
-                ing_name = (used_ing.get("name") or "").lower()
+                ing_name = (used_ing.get("name") or "").lower().strip()
                 used_ing_enhanced = used_ing.copy()
                 
                 # Find matching inventory item
-                # Try exact match first, then partial match, then synonym match
+                # Try multiple matching strategies to handle cases like:
+                # - "raspberry jam" should match "jam" in inventory
+                # - "strawberry jam" should match "jam" in inventory
                 inventory_match = None
                 inventory_items = []
                 
@@ -235,29 +237,77 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 if ing_name in inventory_map:
                     inventory_items = inventory_map[ing_name]
                 else:
-                    # 2. Try partial match (ingredient name contains inventory name or vice versa)
+                    # 2. Try partial match - check if any inventory item name is contained in ingredient name
+                    # This handles cases like:
+                    # - "raspberry jam" matching "jam"
+                    # - "wheat flour" matching "flour"
+                    # - "sunflower oil" matching "oil"
+                    # - "cheddar cheese" matching "cheese"
+                    # - "whole milk" matching "milk"
                     for map_key, items in inventory_map.items():
-                        if map_key in ing_name or ing_name in map_key:
-                            inventory_items.extend(items)
-                            break
+                        # Check if inventory name is contained in ingredient name (e.g., "jam" in "raspberry jam")
+                        # Use word boundaries to avoid false matches like "rice" in "price"
+                        if len(map_key) > 2:  # Only match words longer than 2 characters
+                            if map_key in ing_name:
+                                # Make sure it's a whole word match or at word boundary
+                                # Check if it's at the start, end, or has space/separator around it
+                                if (ing_name.startswith(map_key + " ") or 
+                                    ing_name.endswith(" " + map_key) or 
+                                    " " + map_key + " " in ing_name or
+                                    ing_name == map_key):
+                                    inventory_items.extend(items)
+                        # Also check if ingredient name is contained in inventory name (e.g., "flour" in "wheat flour")
+                        if len(ing_name) > 2:
+                            if ing_name in map_key:
+                                if (map_key.startswith(ing_name + " ") or 
+                                    map_key.endswith(" " + ing_name) or 
+                                    " " + ing_name + " " in map_key or
+                                    map_key == ing_name):
+                                    inventory_items.extend(items)
                     
-                    # 3. Try synonym match
+                    # 3. Try word-based matching (split by spaces and check individual words)
+                    if not inventory_items:
+                        ing_words = set(ing_name.split())
+                        for map_key, items in inventory_map.items():
+                            map_words = set(map_key.split())
+                            # If any significant word matches (words longer than 3 chars to avoid "a", "an", "the")
+                            common_words = [w for w in ing_words if len(w) > 3 and w in map_words]
+                            if common_words:
+                                inventory_items.extend(items)
+                    
+                    # 4. Try synonym match
                     if not inventory_items:
                         for key, synonyms in SYNONYMS.items():
-                            if ing_name in key or key in ing_name:
+                            # Check if ingredient matches the key or any synonym
+                            if key.lower() in ing_name or ing_name in key.lower():
                                 # Check if any synonym matches our inventory
                                 for synonym in synonyms:
                                     if synonym.lower() in inventory_map:
                                         inventory_items.extend(inventory_map[synonym.lower()])
-                                        break
                                 # Also check if the key itself is in inventory
                                 if key.lower() in inventory_map:
                                     inventory_items.extend(inventory_map[key.lower()])
+                            # Also check if any synonym is in the ingredient name
+                            for synonym in synonyms:
+                                if synonym.lower() in ing_name or ing_name in synonym.lower():
+                                    if key.lower() in inventory_map:
+                                        inventory_items.extend(inventory_map[key.lower()])
+                                    if synonym.lower() in inventory_map:
+                                        inventory_items.extend(inventory_map[synonym.lower()])
                 
                 if inventory_items:
+                    # Remove duplicates while preserving order
+                    seen = set()
+                    unique_items = []
+                    for item in inventory_items:
+                        item_id = item.get("inventory_id")
+                        if item_id not in seen:
+                            seen.add(item_id)
+                            unique_items.append(item)
+                    
                     # Sort by expiry date (soonest first)
                     inventory_items_sorted = sorted(
-                        inventory_items,
+                        unique_items,
                         key=lambda x: datetime.strptime(x.get("expiry_date") or "9999-12-31", "%Y-%m-%d").date()
                     )
                     inventory_match = inventory_items_sorted[0]
