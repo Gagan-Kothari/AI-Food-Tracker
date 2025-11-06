@@ -150,6 +150,30 @@ async def send_user_expiry_alerts_route(request: UserIdRequest, db: Session = De
     result = send_expiry_alerts(db, request.userid)
     return result
 
+@router.post("/user/test-whatsapp")
+async def test_whatsapp_route(request: UserIdRequest, db: Session = Depends(get_db)):
+    """Test WhatsApp notification for a user (for debugging)"""
+    from app.whatsapp_alerts import send_whatsapp_message
+    from app.models import models
+    
+    user = db.query(models.Users).filter(models.Users.id == request.userid).first()
+    if not user:
+        return {"status": False, "message": "User not found"}
+    
+    if not user.phone_number:
+        return {"status": False, "message": f"User has no phone number. Current value: {user.phone_number}"}
+    
+    test_message = "🧪 Test message from AI Food Tracker!\n\nIf you received this, your WhatsApp integration is working correctly! ✅"
+    result = send_whatsapp_message(user.phone_number, test_message)
+    
+    return {
+        "status": result.get("status", False),
+        "message": result.get("message", "Unknown result"),
+        "user_phone": user.phone_number,
+        "formatted_phone": user.phone_number,  # Will be formatted in send_whatsapp_message
+        "whatsapp_result": result
+    }
+
 # @router.post("/admin/verifyitem")
 # async def verify_item(barcode:str):
 #     return fetch_items_offAPI(barcode)

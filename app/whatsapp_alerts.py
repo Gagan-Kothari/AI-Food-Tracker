@@ -26,15 +26,27 @@ def format_phone_number(phone: str) -> str:
     Phone should be in E.164 format: +1234567890
     """
     if not phone:
+        print("WARNING: Empty phone number provided")
         return ""
     phone = phone.strip()
+    print(f"DEBUG: Formatting phone number. Original: '{phone}'")
+    
     # Remove any existing whatsapp: prefix
     if phone.startswith("whatsapp:"):
         phone = phone.replace("whatsapp:", "")
+    
+    # Remove any spaces, dashes, or parentheses
+    phone = phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    
     # Ensure it starts with +
     if not phone.startswith("+"):
-        # Assume it's a local number, you may need to add country code
+        # If it starts with 0, remove it (common in some countries)
+        if phone.startswith("0"):
+            phone = phone[1:]
+        # Add + prefix
         phone = "+" + phone
+    
+    print(f"DEBUG: Formatted phone number: '{phone}'")
     return phone
 
 
@@ -51,12 +63,16 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
     """
     try:
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+            print("ERROR: WhatsApp credentials not configured")
             return {
                 "status": False,
                 "message": "WhatsApp credentials not configured. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env"
             }
         
         formatted_phone = format_phone_number(to_phone)
+        print(f"DEBUG: Sending WhatsApp message to: {formatted_phone}")
+        print(f"DEBUG: Original phone number: {to_phone}")
+        print(f"DEBUG: Message preview: {message[:50]}...")
         
         # WhatsApp Cloud API endpoint
         url = f"{WHATSAPP_API_BASE_URL}/{WHATSAPP_PHONE_NUMBER_ID}/messages"
@@ -79,11 +95,18 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             }
         }
         
+        print(f"DEBUG: WhatsApp API URL: {url}")
+        print(f"DEBUG: Payload: {payload}")
+        
         # Send request
         response = requests.post(url, json=payload, headers=headers)
         
+        print(f"DEBUG: Response status code: {response.status_code}")
+        print(f"DEBUG: Response content: {response.text}")
+        
         if response.status_code == 200:
             response_data = response.json()
+            print(f"SUCCESS: WhatsApp message sent. Message ID: {response_data.get('messages', [{}])[0].get('id', '')}")
             return {
                 "status": True,
                 "message": "WhatsApp alert sent successfully",
@@ -92,13 +115,20 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         else:
             error_data = response.json() if response.content else {}
             error_message = error_data.get("error", {}).get("message", "Unknown error")
+            error_code = error_data.get("error", {}).get("code", "Unknown")
+            print(f"ERROR: Failed to send WhatsApp message. Status: {response.status_code}, Error: {error_message}, Code: {error_code}")
+            print(f"ERROR: Full error data: {error_data}")
             return {
                 "status": False,
                 "message": f"Failed to send WhatsApp alert: {error_message}",
                 "error_code": response.status_code,
+                "whatsapp_error_code": error_code,
                 "error_details": error_data
             }
     except Exception as e:
+        print(f"EXCEPTION: Error sending WhatsApp message: {str(e)}")
+        import traceback
+        print(f"EXCEPTION: Traceback: {traceback.format_exc()}")
         return {
             "status": False,
             "message": f"Failed to send WhatsApp alert: {str(e)}"

@@ -71,6 +71,7 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
             
             # Send WhatsApp notification for donation
             if user and user.phone_number:
+                print(f"DEBUG: User found with phone number: {user.phone_number}")
                 donation_message = f"❤️ Thank you for your generous donation!\n\n"
                 donation_message += f"You've donated {donated_count} item{'s' if donated_count > 1 else ''}:\n"
                 for item_name in donated_items_details[:5]:  # Limit to first 5 items
@@ -81,7 +82,10 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
                 donation_message += f"Total points: {user.points}\n\n"
                 donation_message += f"Your kindness helps reduce food waste and feeds families in need. Thank you for making a difference! 🌟"
                 
-                send_whatsapp_message(user.phone_number, donation_message)
+                result = send_whatsapp_message(user.phone_number, donation_message)
+                print(f"DEBUG: Donation notification result: {result}")
+            else:
+                print(f"DEBUG: User not found or no phone number. User: {user}, Phone: {user.phone_number if user else 'No user'}")
             
             return {
                 "message": f"Successfully donated {donated_count} items", 
