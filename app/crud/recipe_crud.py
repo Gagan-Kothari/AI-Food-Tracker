@@ -77,6 +77,24 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         # Get user's inventory using existing function
         inventory_data = user_inventory(user_id, db, models.FoodStatusLog, models.Inventory)
         
+        # Check if inventory_data is an error dict instead of a list
+        if isinstance(inventory_data, dict) and "error" in inventory_data:
+            return {
+                "success": False,
+                "error": f"Error fetching inventory: {inventory_data.get('error', 'Unknown error')}",
+                "recipes": [],
+                "ingredients_used": []
+            }
+        
+        # Ensure inventory_data is a list
+        if not isinstance(inventory_data, list):
+            return {
+                "success": False,
+                "error": "Invalid inventory data format",
+                "recipes": [],
+                "ingredients_used": []
+            }
+        
         if not inventory_data or len(inventory_data) == 0:
             return {
                 "success": False,
@@ -85,13 +103,24 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 "ingredients_used": []
             }
         
+        # Debug: Log inventory data
+        print(f"DEBUG: Found {len(inventory_data)} items in inventory")
+        print(f"DEBUG: Sample item: {inventory_data[0] if inventory_data else 'None'}")
+        
         # Extract ingredient names for API call (use f_name from inventory)
-        ingredients = [item.get("f_name", "") for item in inventory_data if item.get("f_name")]
+        # Filter out empty strings and None values
+        ingredients = []
+        for item in inventory_data:
+            f_name = item.get("f_name", "")
+            if f_name and isinstance(f_name, str) and f_name.strip():
+                ingredients.append(f_name.strip())
+        
+        print(f"DEBUG: Extracted {len(ingredients)} valid ingredients: {ingredients[:5]}")
         
         if not ingredients:
             return {
                 "success": False,
-                "error": "No valid ingredients found in inventory",
+                "error": "No valid ingredients found in inventory (items may have empty names)",
                 "recipes": [],
                 "ingredients_used": []
             }
