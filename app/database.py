@@ -14,7 +14,7 @@ env_database_url = os.getenv("DATABASE_URL")
 
 if env_database_url:
     # Normalize psycopg2 URL to psycopg3 format (psycopg3 is compatible with postgresql://)
-    DATABASE_URL = env_database_url.replace("postgresql+psycopg2://", "postgresql://")
+    DATABASE_URL = env_database_url.replace("postgresql+psycopg2://", "postgresql+psycopg://")
 else:
     # Default to SQLite for local development
     DATABASE_URL = "sqlite:///./food_tracker.db"
