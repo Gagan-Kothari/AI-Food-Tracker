@@ -107,13 +107,22 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         print(f"DEBUG: Found {len(inventory_data)} items in inventory")
         print(f"DEBUG: Sample item: {inventory_data[0] if inventory_data else 'None'}")
         
-        # Extract ingredient names for API call (use f_name from inventory)
+        # Extract ingredient names for API call
+        # Use category if categorystatus is true, otherwise use f_name
         # Filter out empty strings and None values
         ingredients = []
         for item in inventory_data:
-            f_name = item.get("f_name", "")
-            if f_name and isinstance(f_name, str) and f_name.strip():
-                ingredients.append(f_name.strip())
+            categorystatus = item.get("categorystatus", False)
+            if categorystatus:
+                # Use category if categorystatus is true
+                category = item.get("category", "")
+                if category and isinstance(category, str) and category.strip():
+                    ingredients.append(category.strip())
+            else:
+                # Use f_name if categorystatus is false
+                f_name = item.get("f_name", "")
+                if f_name and isinstance(f_name, str) and f_name.strip():
+                    ingredients.append(f_name.strip())
         
         print(f"DEBUG: Extracted {len(ingredients)} valid ingredients: {ingredients[:5]}")
         
@@ -140,14 +149,26 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 "ingredients_used": ingredients
             }
         
-        # Create a mapping of inventory items by name (case-insensitive)
+        # Create a mapping of inventory items by name/category (case-insensitive)
+        # Map both f_name and category (if categorystatus is true) to the same items
         inventory_map = {}
         for item in inventory_data:
-            item_name = (item.get("f_name") or "").lower()
-            if item_name:
-                if item_name not in inventory_map:
-                    inventory_map[item_name] = []
-                inventory_map[item_name].append(item)
+            categorystatus = item.get("categorystatus", False)
+            
+            # Map by category if categorystatus is true
+            if categorystatus:
+                category = (item.get("category") or "").lower()
+                if category:
+                    if category not in inventory_map:
+                        inventory_map[category] = []
+                    inventory_map[category].append(item)
+            
+            # Always also map by f_name for matching
+            f_name = (item.get("f_name") or "").lower()
+            if f_name:
+                if f_name not in inventory_map:
+                    inventory_map[f_name] = []
+                inventory_map[f_name].append(item)
         
         # Enhance recipes with inventory information and calculate priority
         enhanced_recipes = []
@@ -178,17 +199,25 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                     inventory_match = inventory_items_sorted[0]
                 
                 if inventory_match:
-                    expiry_date_str = inventory_match.get("expiry_date") or ""
+                    expiry_date_str = inventory_match.get("expiry_date")
+                    expiry_date_value = None
+                    days_until_expiry = None
+                    
                     if expiry_date_str:
-                        expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
-                        days_until_expiry = (expiry_date - today).days
-                    else:
-                        days_until_expiry = None
+                        try:
+                            expiry_date_value = expiry_date_str  # Keep as string for frontend
+                            expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
+                            days_until_expiry = (expiry_date - today).days
+                        except (ValueError, TypeError) as e:
+                            print(f"DEBUG: Error parsing expiry_date '{expiry_date_str}': {e}")
+                            expiry_date_value = None
+                            days_until_expiry = None
                     
                     used_ing_enhanced.update({
                         "inventory_id": inventory_match.get("inventory_id"),
-                        "expiry_date": inventory_match.get("expiry_date"),
+                        "expiry_date": expiry_date_value,  # Always set, even if None
                         "quantity": inventory_match.get("quantity", ""),
+                        "unit": inventory_match.get("quantity", ""),  # Add unit field
                         "category": inventory_match.get("category", ""),
                         "days_until_expiry": days_until_expiry,
                         "available": True
@@ -203,6 +232,7 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 else:
                     used_ing_enhanced.update({
                         "available": True,  # Still available, just not in our inventory tracking
+                        "expiry_date": None,  # Explicitly set to None
                         "days_until_expiry": None
                     })
                 
