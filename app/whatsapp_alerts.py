@@ -62,8 +62,18 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         dict: Success/failure status
     """
     try:
+        # Debug: Check if credentials are loaded
+        print(f"DEBUG: ========== WhatsApp API Call Debug ==========")
+        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN present: {bool(WHATSAPP_ACCESS_TOKEN)}")
+        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN length: {len(WHATSAPP_ACCESS_TOKEN) if WHATSAPP_ACCESS_TOKEN else 0}")
+        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN first 20 chars: {WHATSAPP_ACCESS_TOKEN[:20] if WHATSAPP_ACCESS_TOKEN else 'None'}...")
+        print(f"DEBUG: WHATSAPP_PHONE_NUMBER_ID: {WHATSAPP_PHONE_NUMBER_ID}")
+        print(f"DEBUG: WHATSAPP_API_VERSION: {WHATSAPP_API_VERSION}")
+        
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
             print("ERROR: WhatsApp credentials not configured")
+            print(f"ERROR: WHATSAPP_ACCESS_TOKEN = {WHATSAPP_ACCESS_TOKEN}")
+            print(f"ERROR: WHATSAPP_PHONE_NUMBER_ID = {WHATSAPP_PHONE_NUMBER_ID}")
             return {
                 "status": False,
                 "message": "WhatsApp credentials not configured. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env"
@@ -90,11 +100,11 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             "Content-Type": "application/json"
         }
         
-        # Request payload
+        # Request payload - matching the working test template format
         # Note: WhatsApp API expects phone number WITHOUT + sign (e.g., "919811546101" not "+919811546101")
+        # Also note: "recipient_type" is optional, removing it to match test template exactly
         payload = {
             "messaging_product": "whatsapp",
-            "recipient_type": "individual",
             "to": whatsapp_phone,
             "type": "text",
             "text": {
@@ -104,13 +114,25 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         }
         
         print(f"DEBUG: WhatsApp API URL: {url}")
-        print(f"DEBUG: Payload: {payload}")
+        print(f"DEBUG: Full URL matches test template format: https://graph.facebook.com/{WHATSAPP_API_VERSION}/{WHATSAPP_PHONE_NUMBER_ID}/messages")
+        print(f"DEBUG: Payload (JSON): {payload}")
+        print(f"DEBUG: Headers (Authorization): Bearer {WHATSAPP_ACCESS_TOKEN[:20]}...")
         
         # Send request
+        print(f"DEBUG: ========== Sending Request ==========")
         response = requests.post(url, json=payload, headers=headers)
         
         print(f"DEBUG: Response status code: {response.status_code}")
+        print(f"DEBUG: Response headers: {dict(response.headers)}")
         print(f"DEBUG: Response content: {response.text}")
+        
+        # Compare with test template
+        print(f"DEBUG: ========== Comparison with Test Template ==========")
+        print(f"DEBUG: Test template URL: https://graph.facebook.com/v22.0/903484642839290/messages")
+        print(f"DEBUG: Our URL: {url}")
+        print(f"DEBUG: Test template 'to': '919811546101'")
+        print(f"DEBUG: Our 'to': '{whatsapp_phone}'")
+        print(f"DEBUG: Match: {'✅ MATCH' if whatsapp_phone == '919811546101' else '❌ MISMATCH'}")
         
         if response.status_code == 200:
             response_data = response.json()
