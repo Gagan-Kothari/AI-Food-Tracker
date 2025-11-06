@@ -29,7 +29,6 @@ If you're using a Business Solution Provider (BSP), follow their specific setup 
 
 ## Step 3: Get Your Credentials
 
-You'll need the following from Meta for Developers:
 
 1. **Access Token** (`WHATSAPP_ACCESS_TOKEN`)
    - Go to your app → WhatsApp → API Setup
