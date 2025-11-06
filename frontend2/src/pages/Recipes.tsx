@@ -33,7 +33,7 @@ interface Recipe {
 export default function Recipes() {
   const { user } = useAuth()
   const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [inventory] = useState<any[]>([])
+  const [inventoryCount, setInventoryCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
@@ -88,10 +88,14 @@ export default function Recipes() {
 
         setRecipes(transformedRecipes)
         
-        // Show inventory summary if available
+        // Update inventory count from summary
         if (recipeResponse.data.inventory_summary) {
           const summary = recipeResponse.data.inventory_summary
+          setInventoryCount(summary.total_items || 0)
           console.log(`Found ${summary.total_items} items in inventory, ${summary.expiring_soon} expiring soon`)
+        } else if (recipeResponse.data.ingredients_used) {
+          // Fallback: use ingredients_used count
+          setInventoryCount(recipeResponse.data.ingredients_used.length || 0)
         }
       } else {
         setError(recipeResponse.data.error || "No ingredients found in inventory")
@@ -151,17 +155,11 @@ export default function Recipes() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Recipe Suggestions</h1>
         <p className="text-gray-600">
-          AI-powered recipes based on your current inventory ({inventory.length} items)
+          AI-powered recipes based on your current inventory ({inventoryCount} items)
         </p>
       </div>
 
-      {inventory.length === 0 ? (
-        <div className="text-center py-12">
-          <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No inventory items found</h2>
-          <p className="text-gray-600">Add items to your inventory to get personalized recipe suggestions</p>
-        </div>
-      ) : recipes.length === 0 ? (
+      {recipes.length === 0 ? (
         <div className="text-center py-12">
           <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">No recipes found</h2>
