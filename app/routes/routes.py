@@ -112,12 +112,13 @@ async def get_recipe_suggestions(ingredients: Ingredients):
     return get_recipes(ingredients.ingredients)
 
 @router.post("/user/recipe/inventory-based")
-async def get_inventory_based_recipe_suggestions(request: UserIdRequest):
-    return get_inventory_based_recipes(request.userid)
+async def get_inventory_based_recipe_suggestions(request: UserIdRequest, db: Session = Depends(get_db)):
+    return get_inventory_based_recipes(request.userid, db)
  
 
 @router.post("/user/expiry_alerts")
 async def expiry_alerts(userid: int, db: Session = Depends(get_db)):
+    """Get expiry alerts for a user (for display purposes)"""
     items = get_expiring_items(db, userid)
     if not items:
         return {"message": "No items expiring soon."}
@@ -131,6 +132,23 @@ async def expiry_alerts(userid: int, db: Session = Depends(get_db)):
         } 
         for item in items
     ]
+
+
+@router.post("/admin/send-expiry-alerts")
+async def send_expiry_alerts_route(request: UserIdRequest, db: Session = Depends(get_db)):
+    """Send WhatsApp expiry alerts to users (admin endpoint)"""
+    from app.whatsapp_alerts import send_expiry_alerts
+    verify_admin_by_userid(request.userid, db)
+    result = send_expiry_alerts(db, None)  # Send to all users
+    return result
+
+
+@router.post("/user/send-expiry-alerts")
+async def send_user_expiry_alerts_route(request: UserIdRequest, db: Session = Depends(get_db)):
+    """Send WhatsApp expiry alerts to a specific user"""
+    from app.whatsapp_alerts import send_expiry_alerts
+    result = send_expiry_alerts(db, request.userid)
+    return result
 
 # @router.post("/admin/verifyitem")
 # async def verify_item(barcode:str):

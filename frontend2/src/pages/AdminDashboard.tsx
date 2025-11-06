@@ -90,6 +90,23 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleSendAlerts = async () => {
+    setBusy(true)
+    try {
+      const response = await apiService.adminSendExpiryAlerts(adminUserid)
+      if (response.data.status) {
+        const alerts = response.data.alerts_sent
+        alert(`Alerts sent successfully!\nYellow: ${alerts.yellow}\nRed: ${alerts.red}\nGrey: ${alerts.grey}`)
+      } else {
+        alert(response.data.message || "Failed to send alerts")
+      }
+    } catch {
+      alert("Failed to send expiry alerts")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handleAddFoodItem = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
@@ -132,7 +149,10 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Users</h2>
-            <button onClick={handleTrainAll} disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Train All Models</button>
+            <div className="flex gap-2">
+              <button onClick={handleTrainAll} disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Train All Models</button>
+              <button onClick={handleSendAlerts} disabled={busy} className="bg-yellow-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Send Expiry Alerts</button>
+            </div>
           </div>
           {loadingUsers ? (
             <div>Loading users...</div>

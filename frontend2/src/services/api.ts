@@ -76,4 +76,8 @@ export const apiService = {
 
   // Get categories
   getCategories: () => api.get("/categories"),
+
+  // Expiry alerts
+  sendExpiryAlerts: (userid: string) => api.post("/user/send-expiry-alerts", { userid }),
+  adminSendExpiryAlerts: (adminUserid: number) => api.post("/admin/send-expiry-alerts", { userid: adminUserid }),
 }

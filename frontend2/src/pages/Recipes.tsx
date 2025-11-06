@@ -70,14 +70,16 @@ export default function Recipes() {
             inventoryId: ing.inventory_id,
             expiryDate: ing.expiry_date,
             quantity: ing.quantity,
-            unit: ing.unit,
+            unit: ing.unit || "item",
             category: ing.category,
-            daysUntilExpiry: ing.days_until_expiry
+            daysUntilExpiry: ing.days_until_expiry,
+            available: ing.available !== false  // Default to true if not specified
           })) || [],
           missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
             id: ing.id,
             name: ing.name,
-            image: ing.image || "/placeholder.svg"
+            image: ing.image || "/placeholder.svg",
+            available: false
           })) || []
         }))
 

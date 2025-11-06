@@ -50,7 +50,7 @@ export default function Scan() {
       const response = await apiService.scanItem(barcode, expiryDate, user.userid)
       
       if (response.data.status || response.data.message === "success") {
-        setMessage(`Item added to inventory successfully! (Source: ${response.data.source || "unknown"})`)
+        setMessage("Item added to inventory successfully!")
         setExpiryDate("")
         setShowManualForm(false)
         setScannedBarcode("")
@@ -58,7 +58,7 @@ export default function Scan() {
         // Item not found, ask user if they want to add manually
         setScannedBarcode(barcode)
         setShowManualForm(true)
-        setMessage("Item not found. Please fill in the details below to add it manually.")
+        setMessage("Item not found. Help us Expand our Database! Please fill in the details below to add it manually.")
       } else {
         setMessage(response.data.message || "Failed to add item to inventory")
       }
@@ -183,7 +183,8 @@ export default function Scan() {
         ) : (
           <div>
             <h2 className="text-xl font-semibold mb-4">Manual Entry</h2>
-            <p className="text-sm text-gray-600 mb-4">Barcode: {scannedBarcode}</p>
+            <p className="text-sm text-gray-600 mb-2">Barcode: {scannedBarcode}</p>
+            <p className="text-sm font-medium text-green-700 mb-4">💡 Help us Expand our Database!</p>
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Food Name *</label>

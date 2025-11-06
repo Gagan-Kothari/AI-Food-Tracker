@@ -1,18 +1,18 @@
+"""
+Recipe suggestions using Spoonacular API based on user inventory
+"""
 import requests
 from dotenv import load_dotenv
 import os
-import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.models import models
 from datetime import datetime, timedelta
+from app.crud.inventory_crud import user_inventory
 
 load_dotenv()
 
 SPOONACULAR_API = "https://api.spoonacular.com/recipes/findByIngredients"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
-
-# Database connection
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./food_tracker.db")
-engine = create_engine(DATABASE_URL)
 
 
 def get_recipes(ingredients):
@@ -34,15 +34,7 @@ def get_recipes(ingredients):
     try:
         joined_ingredients = ",".join(ingredients)
 
-        params = {
-            "ingredients": joined_ingredients,
-            "number": 10,  # Increased to 10 recipes
-            "ranking": 1,
-            "ignorePantry": True,
-            "apikey": SPOONACULAR_API_KEY
-        }
-        
-        url = f"{SPOONACULAR_API}?ingredients={joined_ingredients}&number={params.get('number')}&apiKey={SPOONACULAR_API_KEY}"
+        url = f"{SPOONACULAR_API}?ingredients={joined_ingredients}&number=10&ranking=1&ignorePantry=true&apiKey={SPOONACULAR_API_KEY}"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
@@ -65,40 +57,27 @@ def get_recipes(ingredients):
         return {"error": f"Unexpected error: {str(e)}"}
 
 
-def get_inventory_based_recipes(user_id: int):
+def get_inventory_based_recipes(user_id: int, db: Session):
     """
-    Get recipe suggestions based on user's inventory with prioritization by expiry date and category.
+    Get recipe suggestions based on user's inventory with proper prioritization.
+    
+    Prioritization order:
+    1. Most ingredients in inventory + Expiry date close of items
+    2. Expiry date close items
+    3. Most ingredients
     
     Args:
         user_id: User ID to fetch inventory for
+        db: Database session
         
     Returns:
         dict: Recipe suggestions with success/error status
     """
     try:
-        # Get user's inventory with expiry dates and categories
-        conn = engine.connect()
-        inventory_query = f"""
-        SELECT 
-            i.id as inventory_id,
-            fi.f_name as name,
-            fi.category,
-            i.expiry_date,
-            fi.quantity
-        FROM inventory i
-        JOIN food_items fi ON i.f_id = fi.f_id
-        WHERE i.u_id = {user_id} 
-        AND i.expiry_date > NOW()
-        ORDER BY 
-            i.expiry_date ASC,  -- Prioritize by expiry date (soonest first)
-            fi.category ASC,    -- Then by category
-            fi.f_name ASC       -- Finally by name
-        """
+        # Get user's inventory using existing function
+        inventory_data = user_inventory(user_id, db, models.FoodStatusLog, models.Inventory)
         
-        inventory_df = pd.read_sql(inventory_query, conn)
-        conn.close()
-        
-        if inventory_df.empty:
+        if not inventory_data or len(inventory_data) == 0:
             return {
                 "success": False,
                 "error": "No ingredients found in inventory",
@@ -106,8 +85,16 @@ def get_inventory_based_recipes(user_id: int):
                 "ingredients_used": []
             }
         
-        # Extract ingredient names for API call
-        ingredients = inventory_df['name'].tolist()
+        # Extract ingredient names for API call (use f_name from inventory)
+        ingredients = [item.get("f_name", "") for item in inventory_data if item.get("f_name")]
+        
+        if not ingredients:
+            return {
+                "success": False,
+                "error": "No valid ingredients found in inventory",
+                "recipes": [],
+                "ingredients_used": []
+            }
         
         # Get recipes from Spoonacular API
         recipe_result = get_recipes(ingredients)
@@ -115,52 +102,152 @@ def get_inventory_based_recipes(user_id: int):
         if recipe_result.get("error"):
             return recipe_result
         
-        # Enhance recipes with inventory information
+        recipes = recipe_result.get("recipes", [])
+        if not recipes:
+            return {
+                "success": False,
+                "error": "No recipes found for these ingredients",
+                "recipes": [],
+                "ingredients_used": ingredients
+            }
+        
+        # Create a mapping of inventory items by name (case-insensitive)
+        inventory_map = {}
+        for item in inventory_data:
+            item_name = item.get("f_name", "").lower()
+            if item_name:
+                if item_name not in inventory_map:
+                    inventory_map[item_name] = []
+                inventory_map[item_name].append(item)
+        
+        # Enhance recipes with inventory information and calculate priority
         enhanced_recipes = []
-        for recipe in recipe_result.get("recipes", []):
+        today = datetime.now().date()
+        
+        for recipe in recipes:
             enhanced_recipe = recipe.copy()
             
-            # Add inventory context for used ingredients
+            # Process used ingredients (available in inventory)
             used_ingredients_with_inventory = []
+            total_days_until_expiry = 0
+            items_expiring_soon = 0  # Items expiring in 7 days or less
+            
             for used_ing in recipe.get("usedIngredients", []):
-                # Find matching inventory item
-                inventory_match = inventory_df[
-                    inventory_df['name'].str.lower() == used_ing.get('name', '').lower()
-                ]
+                ing_name = used_ing.get("name", "").lower()
+                used_ing_enhanced = used_ing.copy()
                 
-                if not inventory_match.empty:
-                    inv_item = inventory_match.iloc[0]
-                    used_ing_with_inventory = used_ing.copy()
-                    used_ing_with_inventory.update({
-                        'inventory_id': int(inv_item['inventory_id']),
-                        'expiry_date': inv_item['expiry_date'].strftime('%Y-%m-%d') if pd.notna(inv_item['expiry_date']) else None,
-                        'quantity': inv_item['quantity'] if pd.notna(inv_item['quantity']) else '1',
-                        'unit': 'item',  # Default unit since it's not in the schema
-                        'category': inv_item['category'],
-                        'days_until_expiry': (inv_item['expiry_date'] - datetime.now()).days if pd.notna(inv_item['expiry_date']) else None
+                # Find matching inventory item
+                inventory_match = None
+                if ing_name in inventory_map:
+                    # Use the first match, or find the one expiring soonest
+                    inventory_items = inventory_map[ing_name]
+                    # Sort by expiry date (soonest first)
+                    inventory_items_sorted = sorted(
+                        inventory_items,
+                        key=lambda x: datetime.strptime(x.get("expiry_date", "9999-12-31"), "%Y-%m-%d").date()
+                    )
+                    inventory_match = inventory_items_sorted[0]
+                
+                if inventory_match:
+                    expiry_date = datetime.strptime(inventory_match.get("expiry_date", ""), "%Y-%m-%d").date()
+                    days_until_expiry = (expiry_date - today).days
+                    
+                    used_ing_enhanced.update({
+                        "inventory_id": inventory_match.get("inventory_id"),
+                        "expiry_date": inventory_match.get("expiry_date"),
+                        "quantity": inventory_match.get("quantity", ""),
+                        "category": inventory_match.get("category", ""),
+                        "days_until_expiry": days_until_expiry,
+                        "available": True
                     })
-                    used_ingredients_with_inventory.append(used_ing_with_inventory)
+                    
+                    # Track expiry information for prioritization
+                    if days_until_expiry <= 7:
+                        items_expiring_soon += 1
+                    if days_until_expiry >= 0:  # Not expired
+                        total_days_until_expiry += days_until_expiry
                 else:
-                    used_ingredients_with_inventory.append(used_ing)
+                    used_ing_enhanced.update({
+                        "available": True,  # Still available, just not in our inventory tracking
+                        "days_until_expiry": None
+                    })
+                
+                used_ingredients_with_inventory.append(used_ing_enhanced)
             
-            enhanced_recipe['usedIngredients'] = used_ingredients_with_inventory
+            # Process missed ingredients (not in inventory)
+            missed_ingredients_enhanced = []
+            for missed_ing in recipe.get("missedIngredients", []):
+                missed_ing_enhanced = missed_ing.copy()
+                missed_ing_enhanced.update({
+                    "available": False
+                })
+                missed_ingredients_enhanced.append(missed_ing_enhanced)
             
-            # Calculate priority score based on expiry dates
-            priority_score = 0
-            for used_ing in used_ingredients_with_inventory:
-                if 'days_until_expiry' in used_ing and used_ing['days_until_expiry'] is not None:
-                    if used_ing['days_until_expiry'] <= 3:
-                        priority_score += 10  # High priority for items expiring soon
-                    elif used_ing['days_until_expiry'] <= 7:
-                        priority_score += 5   # Medium priority
-                    else:
-                        priority_score += 1  # Low priority
+            enhanced_recipe["usedIngredients"] = used_ingredients_with_inventory
+            enhanced_recipe["missedIngredients"] = missed_ingredients_enhanced
             
-            enhanced_recipe['priority_score'] = priority_score
+            # Calculate priority score
+            # Priority 1: Most ingredients in inventory + Expiry date close
+            # Priority 2: Expiry date close items
+            # Priority 3: Most ingredients
+            
+            used_count = len(used_ingredients_with_inventory)
+            missed_count = len(missed_ingredients_enhanced)
+            total_ingredients = used_count + missed_count
+            
+            # Score components:
+            # 1. Ratio of used ingredients (higher is better)
+            ingredient_ratio_score = (used_count / total_ingredients * 100) if total_ingredients > 0 else 0
+            
+            # 2. Items expiring soon (more items expiring soon = higher priority)
+            expiring_soon_score = items_expiring_soon * 50  # 50 points per item expiring soon
+            
+            # 3. Average days until expiry (lower = higher priority, but only for items not expired)
+            # Invert so lower days = higher score
+            if used_count > 0 and total_days_until_expiry >= 0:
+                avg_days = total_days_until_expiry / used_count
+                # Items expiring in 0-3 days get highest score, 4-7 get medium, etc.
+                if avg_days <= 3:
+                    expiry_score = 100
+                elif avg_days <= 7:
+                    expiry_score = 70
+                elif avg_days <= 14:
+                    expiry_score = 40
+                else:
+                    expiry_score = 10
+            else:
+                expiry_score = 0
+            
+            # Combined priority score
+            # Weight: ingredient ratio (40%), expiring soon count (40%), expiry proximity (20%)
+            priority_score = (
+                ingredient_ratio_score * 0.4 +
+                expiring_soon_score * 0.4 +
+                expiry_score * 0.2
+            )
+            
+            enhanced_recipe["priority_score"] = round(priority_score, 2)
+            enhanced_recipe["usedIngredientCount"] = used_count
+            enhanced_recipe["missedIngredientCount"] = missed_count
+            enhanced_recipe["items_expiring_soon"] = items_expiring_soon
+            enhanced_recipe["avg_days_until_expiry"] = round(total_days_until_expiry / used_count, 1) if used_count > 0 else None
+            
             enhanced_recipes.append(enhanced_recipe)
         
         # Sort recipes by priority score (highest first)
-        enhanced_recipes.sort(key=lambda x: x.get('priority_score', 0), reverse=True)
+        # Secondary sort: by used ingredient count (more is better)
+        # Tertiary sort: by items expiring soon (more is better)
+        enhanced_recipes.sort(
+            key=lambda x: (
+                x.get("priority_score", 0),
+                x.get("usedIngredientCount", 0),
+                x.get("items_expiring_soon", 0)
+            ),
+            reverse=True
+        )
+        
+        # Limit to top 10 recipes
+        enhanced_recipes = enhanced_recipes[:10]
         
         return {
             "success": True,
@@ -168,9 +255,9 @@ def get_inventory_based_recipes(user_id: int):
             "recipes": enhanced_recipes,
             "total_recipes": len(enhanced_recipes),
             "inventory_summary": {
-                "total_items": len(inventory_df),
-                "expiring_soon": len(inventory_df[inventory_df['expiry_date'] <= datetime.now() + timedelta(days=3)]),
-                "categories": inventory_df['category'].unique().tolist()
+                "total_items": len(inventory_data),
+                "expiring_soon": len([item for item in inventory_data 
+                                     if datetime.strptime(item.get("expiry_date", "9999-12-31"), "%Y-%m-%d").date() <= today + timedelta(days=7)])
             }
         }
         
