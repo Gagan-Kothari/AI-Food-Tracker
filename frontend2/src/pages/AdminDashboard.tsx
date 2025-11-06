@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAdmin } from "../contexts/AdminContext"
+import { useAuth } from "../contexts/AuthContext"
+import { useNavigate } from "react-router-dom"
 import { apiService } from "../services/api"
 
 interface UserRow {
@@ -12,17 +13,22 @@ interface UserRow {
 }
 
 export default function AdminDashboard() {
-  const { admin, logout } = useAdmin()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [addForm, setAddForm] = useState({ userid: "", barcode: "", expiry_date: "" })
   const [busy, setBusy] = useState(false)
-  const token = admin?.token || ""
+  const adminUserid = user ? Number(user.userid) : 0
 
   useEffect(() => {
+    if (!user || !user.isAdmin) {
+      navigate("/login")
+      return
+    }
     const load = async () => {
       try {
-        const res = await apiService.adminListUsers(token)
+        const res = await apiService.adminListUsers(adminUserid)
         setUsers(res.data)
       } catch {
         // ignore
@@ -30,14 +36,14 @@ export default function AdminDashboard() {
         setLoadingUsers(false)
       }
     }
-    if (token) load()
-  }, [token])
+    if (adminUserid > 0) load()
+  }, [adminUserid, user, navigate])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
     try {
-      await apiService.adminAddInventory(token, Number(addForm.userid), addForm.barcode, addForm.expiry_date)
+      await apiService.adminAddInventory(adminUserid, Number(addForm.userid), addForm.barcode, addForm.expiry_date)
       alert("Item added to inventory")
       setAddForm({ userid: "", barcode: "", expiry_date: "" })
     } catch {
@@ -50,7 +56,7 @@ export default function AdminDashboard() {
   const handleRetrain = async (id: number) => {
     setBusy(true)
     try {
-      await apiService.adminRetrainUser(token, id)
+      await apiService.adminRetrainUser(adminUserid, id)
       alert("Retraining triggered")
     } catch {
       alert("Failed to retrain user model")
@@ -62,7 +68,7 @@ export default function AdminDashboard() {
   const handleTrainAll = async () => {
     setBusy(true)
     try {
-      await apiService.trainModels(token)
+      await apiService.adminTrainAll(adminUserid)
       alert("Training triggered for all users")
     } catch {
       alert("Failed to trigger training")
@@ -71,12 +77,17 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <button onClick={logout} className="text-red-600">Logout</button>
+          <button onClick={handleLogout} className="text-red-600">Logout</button>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">

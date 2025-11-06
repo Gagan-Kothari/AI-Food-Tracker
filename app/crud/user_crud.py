@@ -54,12 +54,16 @@ def verify_user_from_db(email, password, db):
     if user and user.password == password:
         userid = str(user.id)
         username = user.name.capitalize()
+        # Check if user is admin
+        is_admin = email.lower() == "adminghh@gmail.com"
         return {"userid": userid,
                 "username": username,
+                "isAdmin": is_admin,
                 "status": True}
     
     return {"userid": "",
             "username": "",
+            "isAdmin": False,
             "status": False}
 
 

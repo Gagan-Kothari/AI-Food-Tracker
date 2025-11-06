@@ -10,19 +10,14 @@ from app.models import models
 
 router = APIRouter()
 
-ADMIN_USERNAME = "admin_ghh"
-ADMIN_PASSWORD = "ghh123"
-ADMIN_TOKEN = "admin-token-ghh"
+ADMIN_EMAIL = "adminghh@gmail.com"
 
-def verify_admin(x_admin_token: str | None = Header(default=None)):
-    if x_admin_token != ADMIN_TOKEN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin token missing or invalid")
-
-@router.post("/admin/login")
-async def admin_login(creds: AdminLogin):
-    if creds.username == ADMIN_USERNAME and creds.password == ADMIN_PASSWORD:
-        return {"token": ADMIN_TOKEN, "role": "admin"}
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin credentials")
+def verify_admin_by_userid(userid: int, db: Session):
+    """Verify if a user is admin by checking their email"""
+    user = db.query(models.Users).filter(models.Users.id == userid).first()
+    if not user or user.email.lower() != ADMIN_EMAIL.lower():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return True
 
 @router.post("/item/scan")
 async def scan_item(senddata : UserData, db: Session = Depends(get_db)):
@@ -148,9 +143,9 @@ async def get_grocery_suggestions_route(request: UserIdRequest):
     return {"suggestions": suggestions, "count": len(suggestions)}
 
 @router.post("/admin/train-models")
-async def train_models_route(x_admin_token: str | None = Header(default=None)):
+async def train_models_route(request: UserIdRequest, db: Session = Depends(get_db)):
     """Train ML models for all users (admin endpoint)"""
-    verify_admin(x_admin_token)
+    verify_admin_by_userid(request.userid, db)
     training_status = train_all_user_models()
     return {"training_status": training_status}
 
@@ -161,9 +156,10 @@ async def retrain_user_model_route(request: UserIdRequest):
     return result
 
 
-@router.get("/admin/users")
-async def admin_list_users(db: Session = Depends(get_db), x_admin_token: str | None = Header(default=None)):
-    verify_admin(x_admin_token)
+@router.post("/admin/users")
+async def admin_list_users(request: UserIdRequest, db: Session = Depends(get_db)):
+    """List all users (admin endpoint)"""
+    verify_admin_by_userid(request.userid, db)
     users = db.query(models.Users).all()
     return [
         {"id": u.id, "name": u.name, "email": u.email, "points": u.points}
@@ -172,8 +168,9 @@ async def admin_list_users(db: Session = Depends(get_db), x_admin_token: str | N
 
 
 @router.post("/admin/inventory/add")
-async def admin_add_inventory(payload: AdminAddInventoryRequest, db: Session = Depends(get_db), x_admin_token: str | None = Header(default=None)):
-    verify_admin(x_admin_token)
+async def admin_add_inventory(payload: AdminAddInventoryRequest, db: Session = Depends(get_db)):
+    """Add item to user inventory (admin endpoint)"""
+    verify_admin_by_userid(payload.admin_userid, db)
     item_data = fetch_items_offAPI(payload.barcode)
     try:
         exp_dt = datetime.strptime(payload.expiry_date, '%Y-%m-%d').date()
@@ -185,8 +182,9 @@ async def admin_add_inventory(payload: AdminAddInventoryRequest, db: Session = D
 
 
 @router.post("/admin/user/retrain")
-async def admin_retrain_user_model(request: UserIdRequest, x_admin_token: str | None = Header(default=None)):
-    verify_admin(x_admin_token)
-    result = retrain_user_model(request.userid)
+async def admin_retrain_user_model(request: AdminRetrainRequest, db: Session = Depends(get_db)):
+    """Retrain a user's model (admin endpoint)"""
+    verify_admin_by_userid(request.admin_userid, db)
+    result = retrain_user_model(request.target_userid)
     return result
 

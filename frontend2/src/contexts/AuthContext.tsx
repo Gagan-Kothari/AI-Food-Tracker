@@ -7,6 +7,7 @@ import { api } from "../services/api"
 interface User {
   userid: string
   username: string
+  isAdmin?: boolean
 }
 
 interface AuthContextType {
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userData = {
           userid: response.data.userid,
           username: response.data.username,
+          isAdmin: response.data.isAdmin || false,
         }
         setUser(userData)
         localStorage.setItem("user", JSON.stringify(userData))

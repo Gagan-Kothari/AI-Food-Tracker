@@ -25,7 +25,18 @@ export default function Login() {
     const success = await login(email, password)
 
     if (success) {
-      navigate("/dashboard")
+      // Check if user is admin and redirect accordingly
+      const savedUser = localStorage.getItem("user")
+      if (savedUser) {
+        const userData = JSON.parse(savedUser)
+        if (userData.isAdmin) {
+          navigate("/admin")
+        } else {
+          navigate("/dashboard")
+        }
+      } else {
+        navigate("/dashboard")
+      }
     } else {
       setError("Invalid email or password")
     }

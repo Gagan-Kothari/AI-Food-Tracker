@@ -64,6 +64,11 @@ class AdminLogin(BaseModel):
 
 
 class AdminAddInventoryRequest(BaseModel):
-    userid: int
+    admin_userid: int  # Admin's user ID for verification
+    userid: int  # Target user's ID to add item to
     barcode: str
     expiry_date: str
+
+class AdminRetrainRequest(BaseModel):
+    admin_userid: int  # Admin's user ID for verification
+    target_userid: int  # Target user's ID to retrain model for
