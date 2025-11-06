@@ -180,6 +180,20 @@ async def donate_items_route(request: dict, db: Session = Depends(get_db)):
 async def get_user_points_route(user_id: int, db: Session = Depends(get_db)):
     return get_user_points(db, user_id)
 
+@router.post("/user/recipe/mark-cooked")
+async def mark_recipe_cooked_route(request: dict, db: Session = Depends(get_db)):
+    """Mark a recipe as cooked and send notification"""
+    from app.crud.recipe_crud import mark_recipe_as_cooked
+    user_id = request.get("userid")
+    recipe_id = request.get("recipe_id")
+    recipe_title = request.get("recipe_title", "Recipe")
+    used_ingredients = request.get("used_ingredients", [])
+    
+    if not user_id or not recipe_id:
+        return {"status": False, "message": "Missing userid or recipe_id"}
+    
+    return mark_recipe_as_cooked(db, int(user_id), int(recipe_id), recipe_title, used_ingredients)
+
 @router.post("/user/grocery-suggestions")
 async def get_grocery_suggestions_route(request: UserIdRequest):
     """Get AI-powered grocery suggestions for a user based on consumption patterns"""

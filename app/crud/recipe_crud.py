@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import models
 from datetime import datetime, timedelta
 from app.crud.inventory_crud import user_inventory
+from app.whatsapp_alerts import send_whatsapp_message
 import re
 
 load_dotenv()
@@ -424,6 +425,9 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             reverse=True
         )
         
+        # Filter out recipes with 0 ingredients (usedIngredientCount = 0)
+        enhanced_recipes = [recipe for recipe in enhanced_recipes if recipe.get("usedIngredientCount", 0) > 0]
+        
         # Limit to top 10 recipes
         enhanced_recipes = enhanced_recipes[:10]
         
@@ -444,4 +448,96 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             "success": False,
             "error": f"Error fetching inventory-based recipes: {str(e)}",
             "recipes": []
+        }
+
+
+def mark_recipe_as_cooked(db: Session, user_id: int, recipe_id: int, recipe_title: str, used_ingredients: list):
+    """
+    Mark a recipe as cooked and send WhatsApp notification with items saved from expiring.
+    
+    Args:
+        db: Database session
+        user_id: User ID
+        recipe_id: Recipe ID from Spoonacular
+        recipe_title: Recipe title
+        used_ingredients: List of used ingredients with inventory information
+        
+    Returns:
+        dict: Success/failure message
+    """
+    try:
+        user = db.query(models.Users).filter(models.Users.id == user_id).first()
+        if not user:
+            return {"status": False, "message": "User not found"}
+        
+        # Find items that were saved from expiring (items with expiry dates)
+        saved_items = []
+        for ing in used_ingredients:
+            if ing.get("inventory_id") and ing.get("expiry_date") and ing.get("days_until_expiry") is not None:
+                days_until_expiry = ing.get("days_until_expiry")
+                # Items expiring in 7 days or less are considered "saved"
+                if days_until_expiry <= 7 and days_until_expiry >= 0:
+                    item_name = ing.get("name", "Unknown")
+                    saved_items.append({
+                        "name": item_name,
+                        "days_until_expiry": days_until_expiry
+                    })
+        
+        # Mark used ingredients as consumed
+        consumed_count = 0
+        for ing in used_ingredients:
+            inventory_id = ing.get("inventory_id")
+            if inventory_id:
+                # Check if already logged
+                existing_log = db.query(models.FoodStatusLog).filter(
+                    models.FoodStatusLog.inventory_id == inventory_id
+                ).first()
+                
+                if not existing_log:
+                    food_status_log = models.FoodStatusLog(
+                        inventory_id=inventory_id,
+                        status="consumed",
+                        notes=f"Used in recipe: {recipe_title}",
+                        timestamp=datetime.now()
+                    )
+                    db.add(food_status_log)
+                    consumed_count += 1
+        
+        if consumed_count > 0:
+            db.commit()
+        
+        # Send WhatsApp notification
+        if user.phone_number:
+            cooked_message = f"🍳 Wonderful! You've cooked '{recipe_title}'!\n\n"
+            
+            if saved_items:
+                cooked_message += f"🌟 You saved {len(saved_items)} item{'s' if len(saved_items) > 1 else ''} from expiring:\n"
+                for item in saved_items[:5]:  # Limit to first 5 items
+                    days = item["days_until_expiry"]
+                    if days == 0:
+                        cooked_message += f"• {item['name']} (expiring today!)\n"
+                    elif days == 1:
+                        cooked_message += f"• {item['name']} (expiring tomorrow)\n"
+                    else:
+                        cooked_message += f"• {item['name']} ({days} days left)\n"
+                if len(saved_items) > 5:
+                    cooked_message += f"• ... and {len(saved_items) - 5} more\n"
+                cooked_message += "\n"
+            
+            cooked_message += f"Your smart cooking helps reduce food waste and keeps your kitchen fresh! 🎉\n\n"
+            cooked_message += f"Keep up the great work! Every meal counts in the fight against food waste. 💚"
+            
+            send_whatsapp_message(user.phone_number, cooked_message)
+        
+        return {
+            "status": True,
+            "message": f"Recipe '{recipe_title}' marked as cooked",
+            "consumed_count": consumed_count,
+            "saved_items_count": len(saved_items)
+        }
+        
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Failed to mark recipe as cooked: {str(e)}"
         }

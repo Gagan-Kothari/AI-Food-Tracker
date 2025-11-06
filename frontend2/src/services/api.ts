@@ -49,6 +49,8 @@ export const apiService = {
   // Recipe suggestions
   getRecipeSuggestions: (ingredients: string[]) => api.post("/user/recipe/suggestions", { ingredients }),
   getInventoryBasedRecipes: (userid: string) => api.post("/user/recipe/inventory-based", { userid }),
+  markRecipeAsCooked: (userid: string, recipeId: number, recipeTitle: string, usedIngredients: any[]) => 
+    api.post("/user/recipe/mark-cooked", { userid, recipe_id: recipeId, recipe_title: recipeTitle, used_ingredients: usedIngredients }),
 
   // Grocery suggestions
   getGrocerySuggestions: (userid: string) => api.post("/user/grocery-suggestions", { userid }),

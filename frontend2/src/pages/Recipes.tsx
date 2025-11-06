@@ -108,9 +108,29 @@ export default function Recipes() {
     }
   }
 
-  const handleCookedRecipe = () => {
-    // In a real app, this would log the recipe as cooked
-    alert("Great! Recipe marked as cooked. This helps us improve our suggestions.")
+  const handleCookedRecipe = async () => {
+    if (!selectedRecipe || !user?.userid) return
+    
+    try {
+      const response = await apiService.markRecipeAsCooked(
+        user.userid,
+        selectedRecipe.id,
+        selectedRecipe.title,
+        selectedRecipe.usedIngredients
+      )
+      
+      if (response.data.status) {
+        alert("Great! Recipe marked as cooked. Check your WhatsApp for a special message! 🎉")
+        setSelectedRecipe(null)
+        // Refresh recipes to update the list
+        fetchInventoryAndRecipes()
+      } else {
+        alert("Failed to mark recipe as cooked. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error marking recipe as cooked:", error)
+      alert("Failed to mark recipe as cooked. Please try again.")
+    }
   }
 
   const retryFetch = () => {
