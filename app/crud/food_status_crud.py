@@ -15,6 +15,12 @@ def update_food_status(db: Session, foodstatus):
         dict: Success/failure message
     """
     try:
+        # Get user_id from inventory item before updating status
+        inventory_item = db.query(models.Inventory).filter(
+            models.Inventory.id == foodstatus.inventory_id
+        ).first()
+        user_id = inventory_item.u_id if inventory_item else None
+        
         food_status_log = models.FoodStatusLog(
             inventory_id=foodstatus.inventory_id,
             status=foodstatus.status,
@@ -24,6 +30,18 @@ def update_food_status(db: Session, foodstatus):
         db.add(food_status_log)
         db.commit()
         db.refresh(food_status_log)
+        
+        # Send expiry alerts automatically when item status changes
+        if user_id:
+            try:
+                from app.whatsapp_alerts import send_expiry_alerts
+                print(f"DEBUG: Item status changed for user {user_id}, checking for expiry alerts...")
+                alert_result = send_expiry_alerts(db, user_id)
+                print(f"DEBUG: Expiry alerts result after status change: {alert_result}")
+            except Exception as e:
+                print(f"DEBUG: Error sending expiry alerts after status change: {str(e)}")
+                # Don't fail status update if alerts fail
+        
         return {"message": "success"}
     except Exception as e:
         return {"message": "Failed to update food status", "error": str(e)}

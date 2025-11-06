@@ -88,7 +88,23 @@ async def verify_user(logininfo : LoginInfo, db : Session = Depends(get_db)):
     email = logininfo.email
     password = logininfo.password
 
-    return verify_user_from_db(email, password, db)
+    status = verify_user_from_db(email, password, db)
+    
+    # Send expiry alerts automatically when user logs in
+    if status.get("status") and status.get("userid"):
+        try:
+            from app.whatsapp_alerts import send_expiry_alerts
+            user_id = int(status.get("userid"))
+            print(f"DEBUG: User logged in (ID: {user_id}), checking for expiry alerts...")
+            alert_result = send_expiry_alerts(db, user_id)
+            print(f"DEBUG: Expiry alerts result on login: {alert_result}")
+        except Exception as e:
+            print(f"DEBUG: Error sending expiry alerts on login: {str(e)}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
+            # Don't fail login if alerts fail
+    
+    return status
 
 @router.post("/admin/verifyitem")
 async def verify_item(item:AdminVerifyItem):

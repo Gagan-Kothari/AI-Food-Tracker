@@ -45,6 +45,16 @@ def add_to_database(db: Session, data, expirydate, user_id):
         db.add(inventory_item)
         db.commit()
 
+        # Send expiry alerts automatically when new item is added
+        try:
+            from app.whatsapp_alerts import send_expiry_alerts
+            print(f"DEBUG: New item added for user {user_id}, checking for expiry alerts...")
+            alert_result = send_expiry_alerts(db, user_id)
+            print(f"DEBUG: Expiry alerts result after adding item: {alert_result}")
+        except Exception as e:
+            print(f"DEBUG: Error sending expiry alerts after adding item: {str(e)}")
+            # Don't fail item addition if alerts fail
+
         return {"message": "success"}
 
     except Exception as e:

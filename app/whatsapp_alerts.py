@@ -218,9 +218,13 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
         dict: Summary of alerts sent
     """
     try:
+        print(f"DEBUG: send_expiry_alerts called for user_id: {user_id}")
         items_by_alert = get_items_for_alerts(db, user_id)
         
+        print(f"DEBUG: Items by alert type - Yellow: {len(items_by_alert.get('yellow', []))}, Red: {len(items_by_alert.get('red', []))}, Grey: {len(items_by_alert.get('grey', []))}")
+        
         if "error" in items_by_alert:
+            print(f"ERROR: Error getting items for alerts: {items_by_alert['error']}")
             return {"status": False, "message": items_by_alert["error"]}
         
         alerts_sent = {
@@ -238,11 +242,20 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     user_items[item.u_id] = {"yellow": [], "red": [], "grey": []}
                 user_items[item.u_id][alert_type].append(item)
         
+        print(f"DEBUG: Found {len(user_items)} user(s) with items needing alerts")
+        
         # Send alerts to each user
         for uid, items in user_items.items():
             user = db.query(models.Users).filter(models.Users.id == uid).first()
-            if not user or not user.phone_number:
+            if not user:
+                print(f"DEBUG: User {uid} not found in database")
                 continue
+            if not user.phone_number:
+                print(f"DEBUG: User {uid} has no phone number. Phone: {user.phone_number}")
+                continue
+            
+            print(f"DEBUG: Sending alerts to user {uid} (phone: {user.phone_number})")
+            print(f"DEBUG: Alert counts - Yellow: {len(items['yellow'])}, Red: {len(items['red'])}, Grey: {len(items['grey'])}")
             
             # Build messages for each alert type
             messages = []
