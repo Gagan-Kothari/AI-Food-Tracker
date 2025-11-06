@@ -11,10 +11,17 @@ interface Recipe {
   image: string
   usedIngredientCount: number
   missedIngredientCount: number
+  priorityScore?: number
   usedIngredients: Array<{
     id: number
     name: string
     image: string
+    inventoryId?: number
+    expiryDate?: string
+    quantity?: number
+    unit?: string
+    category?: string
+    daysUntilExpiry?: number
   }>
   missedIngredients: Array<{
     id: number
@@ -42,188 +49,50 @@ export default function Recipes() {
       setLoading(true)
       setError(null)
 
-      // Fetch user inventory
-      console.log("Fetching inventory for user:", user.userid)
-      const inventoryResponse = await apiService.getInventory(user.userid)
-      console.log("Inventory response:", inventoryResponse.data)
+      // Get inventory-based recipe suggestions
+      console.log("Fetching inventory-based recipes for user:", user.userid)
+      const recipeResponse = await apiService.getInventoryBasedRecipes(user.userid)
+      console.log("Inventory-based recipe API response:", recipeResponse.data)
       
-      if (Array.isArray(inventoryResponse.data)) {
-        setInventory(inventoryResponse.data)
+      if (recipeResponse.data.success && recipeResponse.data.recipes) {
+        // Transform API response to match our interface
+        const transformedRecipes: Recipe[] = recipeResponse.data.recipes.map((recipe: any) => ({
+          id: recipe.id,
+          title: recipe.title,
+          image: recipe.image || "/placeholder.svg",
+          usedIngredientCount: recipe.usedIngredientCount || 0,
+          missedIngredientCount: recipe.missedIngredientCount || 0,
+          priorityScore: recipe.priority_score || 0,
+          usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
+            id: ing.id,
+            name: ing.name,
+            image: ing.image || "/placeholder.svg",
+            inventoryId: ing.inventory_id,
+            expiryDate: ing.expiry_date,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            category: ing.category,
+            daysUntilExpiry: ing.days_until_expiry
+          })) || [],
+          missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
+            id: ing.id,
+            name: ing.name,
+            image: ing.image || "/placeholder.svg"
+          })) || []
+        }))
 
-        // Extract ingredients from inventory and map to better ingredient names
-        const ingredients = inventoryResponse.data
-          .map((item) => {
-            const name = item.f_name?.toLowerCase() || ""
-            // Map product names to better ingredient names for recipe API
-            if (name.includes("jam")) return "jam"
-            if (name.includes("tea")) return "tea"
-            if (name.includes("cake")) return "cake"
-            if (name.includes("ghee")) return "butter"
-            if (name.includes("milk")) return "milk"
-            if (name.includes("bread")) return "bread"
-            if (name.includes("cheese")) return "cheese"
-            if (name.includes("chicken")) return "chicken"
-            if (name.includes("rice")) return "rice"
-            if (name.includes("tomato")) return "tomatoes"
-            if (name.includes("onion")) return "onions"
-            if (name.includes("garlic")) return "garlic"
-            if (name.includes("potato")) return "potatoes"
-            if (name.includes("carrot")) return "carrots"
-            if (name.includes("apple")) return "apples"
-            if (name.includes("banana")) return "bananas"
-            if (name.includes("orange")) return "oranges"
-            if (name.includes("egg")) return "eggs"
-            if (name.includes("flour")) return "flour"
-            if (name.includes("sugar")) return "sugar"
-            if (name.includes("salt")) return "salt"
-            if (name.includes("oil")) return "olive oil"
-            if (name.includes("pasta")) return "pasta"
-            if (name.includes("sauce")) return "tomato sauce"
-            if (name.includes("soup")) return "soup"
-            if (name.includes("juice")) return "juice"
-            if (name.includes("water")) return "water"
-            if (name.includes("coffee")) return "coffee"
-            if (name.includes("yogurt")) return "yogurt"
-            if (name.includes("cream")) return "cream"
-            if (name.includes("honey")) return "honey"
-            if (name.includes("chocolate")) return "chocolate"
-            if (name.includes("nut")) return "nuts"
-            if (name.includes("seed")) return "seeds"
-            if (name.includes("spice")) return "spices"
-            if (name.includes("herb")) return "herbs"
-            if (name.includes("vegetable")) return "vegetables"
-            if (name.includes("fruit")) return "fruits"
-            if (name.includes("meat")) return "meat"
-            if (name.includes("fish")) return "fish"
-            if (name.includes("beef")) return "beef"
-            if (name.includes("pork")) return "pork"
-            if (name.includes("lamb")) return "lamb"
-            if (name.includes("turkey")) return "turkey"
-            if (name.includes("duck")) return "duck"
-            if (name.includes("seafood")) return "seafood"
-            if (name.includes("shrimp")) return "shrimp"
-            if (name.includes("salmon")) return "salmon"
-            if (name.includes("tuna")) return "tuna"
-            if (name.includes("cod")) return "cod"
-            if (name.includes("tilapia")) return "tilapia"
-            if (name.includes("mackerel")) return "mackerel"
-            if (name.includes("sardine")) return "sardines"
-            if (name.includes("anchovy")) return "anchovies"
-            if (name.includes("oyster")) return "oysters"
-            if (name.includes("mussel")) return "mussels"
-            if (name.includes("clam")) return "clams"
-            if (name.includes("scallop")) return "scallops"
-            if (name.includes("lobster")) return "lobster"
-            if (name.includes("crab")) return "crab"
-            if (name.includes("squid")) return "squid"
-            if (name.includes("octopus")) return "octopus"
-            if (name.includes("calamari")) return "calamari"
-            if (name.includes("scallop")) return "scallops"
-            if (name.includes("mussel")) return "mussels"
-            if (name.includes("clam")) return "clams"
-            if (name.includes("oyster")) return "oysters"
-            if (name.includes("anchovy")) return "anchovies"
-            if (name.includes("sardine")) return "sardines"
-            if (name.includes("mackerel")) return "mackerel"
-            if (name.includes("tilapia")) return "tilapia"
-            if (name.includes("cod")) return "cod"
-            if (name.includes("tuna")) return "tuna"
-            if (name.includes("salmon")) return "salmon"
-            if (name.includes("shrimp")) return "shrimp"
-            if (name.includes("seafood")) return "seafood"
-            if (name.includes("duck")) return "duck"
-            if (name.includes("turkey")) return "turkey"
-            if (name.includes("lamb")) return "lamb"
-            if (name.includes("pork")) return "pork"
-            if (name.includes("beef")) return "beef"
-            if (name.includes("fish")) return "fish"
-            if (name.includes("meat")) return "meat"
-            if (name.includes("fruits")) return "fruits"
-            if (name.includes("vegetables")) return "vegetables"
-            if (name.includes("herbs")) return "herbs"
-            if (name.includes("spices")) return "spices"
-            if (name.includes("seeds")) return "seeds"
-            if (name.includes("nuts")) return "nuts"
-            if (name.includes("chocolate")) return "chocolate"
-            if (name.includes("honey")) return "honey"
-            if (name.includes("cream")) return "cream"
-            if (name.includes("yogurt")) return "yogurt"
-            if (name.includes("coffee")) return "coffee"
-            if (name.includes("water")) return "water"
-            if (name.includes("juice")) return "juice"
-            if (name.includes("soup")) return "soup"
-            if (name.includes("tomato sauce")) return "tomato sauce"
-            if (name.includes("pasta")) return "pasta"
-            if (name.includes("olive oil")) return "olive oil"
-            if (name.includes("salt")) return "salt"
-            if (name.includes("sugar")) return "sugar"
-            if (name.includes("flour")) return "flour"
-            if (name.includes("eggs")) return "eggs"
-            if (name.includes("oranges")) return "oranges"
-            if (name.includes("bananas")) return "bananas"
-            if (name.includes("apples")) return "apples"
-            if (name.includes("carrots")) return "carrots"
-            if (name.includes("potatoes")) return "potatoes"
-            if (name.includes("garlic")) return "garlic"
-            if (name.includes("onions")) return "onions"
-            if (name.includes("tomatoes")) return "tomatoes"
-            if (name.includes("rice")) return "rice"
-            if (name.includes("chicken")) return "chicken"
-            if (name.includes("butter")) return "butter"
-            if (name.includes("cake")) return "cake"
-            if (name.includes("tea")) return "tea"
-            if (name.includes("jam")) return "jam"
-            // If no mapping found, try to extract a simple ingredient name
-            return name.split(" ")[0] // Take first word as ingredient
-          })
-          .filter(Boolean) // Remove null/undefined values
-          .filter((ingredient, index, arr) => arr.indexOf(ingredient) === index) // Remove duplicates
-          .slice(0, 10)
+        // Sort by priority score (highest first)
+        transformedRecipes.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0))
 
-        if (ingredients.length === 0) {
-          setError("No suitable ingredients found in your inventory for recipe suggestions")
-          setLoading(false)
-          return
-        }
-
-        // If we have very few ingredients, add some common ones for better suggestions
-        let finalIngredients = ingredients
-        if (ingredients.length < 3) {
-          const commonIngredients = ["onions", "garlic", "olive oil", "salt", "pepper"]
-          finalIngredients = [...ingredients, ...commonIngredients.slice(0, 3 - ingredients.length)]
-        }
-
-        // Get recipe suggestions from API
-        console.log("Sending ingredients to API:", finalIngredients)
-        const recipeResponse = await apiService.getRecipeSuggestions(finalIngredients)
-        console.log("Recipe API response:", recipeResponse.data)
+        setRecipes(transformedRecipes)
         
-        if (recipeResponse.data.success && recipeResponse.data.recipes) {
-          // Transform API response to match our interface
-          const transformedRecipes: Recipe[] = recipeResponse.data.recipes.map((recipe: any) => ({
-            id: recipe.id,
-            title: recipe.title,
-            image: recipe.image || "/placeholder.svg",
-            usedIngredientCount: recipe.usedIngredientCount || 0,
-            missedIngredientCount: recipe.missedIngredientCount || 0,
-            usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
-              id: ing.id,
-              name: ing.name,
-              image: ing.image || "/placeholder.svg"
-            })) || [],
-            missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
-              id: ing.id,
-              name: ing.name,
-              image: ing.image || "/placeholder.svg"
-            })) || []
-          }))
-
-          setRecipes(transformedRecipes)
-        } else {
-          setError(recipeResponse.data.error || "Failed to fetch recipes")
+        // Show inventory summary if available
+        if (recipeResponse.data.inventory_summary) {
+          const summary = recipeResponse.data.inventory_summary
+          console.log(`Found ${summary.total_items} items in inventory, ${summary.expiring_soon} expiring soon`)
         }
       } else {
-        setError("Failed to fetch inventory")
+        setError(recipeResponse.data.error || "No ingredients found in inventory")
       }
     } catch (error) {
       console.error("Error fetching recipes:", error)
@@ -305,7 +174,20 @@ export default function Recipes() {
             >
               <img src={recipe.image || "/placeholder.svg"} alt={recipe.title} className="w-full h-48 object-cover" />
               <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{recipe.title}</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{recipe.title}</h3>
+                  {recipe.priorityScore && recipe.priorityScore > 0 && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      recipe.priorityScore >= 10 
+                        ? 'bg-red-100 text-red-800' 
+                        : recipe.priorityScore >= 5 
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                    }`}>
+                      {recipe.priorityScore >= 10 ? 'High Priority' : recipe.priorityScore >= 5 ? 'Medium Priority' : 'Low Priority'}
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
@@ -343,14 +225,33 @@ export default function Recipes() {
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 mb-1">Ingredients you have:</h4>
                       <div className="flex flex-wrap gap-1">
-                        {recipe.usedIngredients.map((ingredient) => (
-                          <span
-                            key={ingredient.id}
-                            className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
-                          >
-                            {ingredient.name}
-                          </span>
-                        ))}
+                        {recipe.usedIngredients.map((ingredient) => {
+                          const isExpiringSoon = ingredient.daysUntilExpiry !== undefined && ingredient.daysUntilExpiry <= 3
+                          const isExpiringThisWeek = ingredient.daysUntilExpiry !== undefined && ingredient.daysUntilExpiry <= 7
+                          
+                          return (
+                            <span
+                              key={ingredient.id}
+                              className={`inline-block text-xs px-2 py-1 rounded-full ${
+                                isExpiringSoon 
+                                  ? 'bg-red-100 text-red-800 border border-red-200' 
+                                  : isExpiringThisWeek 
+                                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                    : 'bg-green-100 text-green-800'
+                              }`}
+                              title={
+                                ingredient.daysUntilExpiry !== undefined 
+                                  ? `Expires in ${ingredient.daysUntilExpiry} days${ingredient.quantity ? ` (${ingredient.quantity} ${ingredient.unit})` : ''}`
+                                  : ingredient.quantity 
+                                    ? `${ingredient.quantity} ${ingredient.unit}`
+                                    : ''
+                              }
+                            >
+                              {ingredient.name}
+                              {isExpiringSoon && ' ⚠️'}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
                   )}

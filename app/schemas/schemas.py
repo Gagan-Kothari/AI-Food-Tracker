@@ -24,7 +24,7 @@ class SignupInfo(BaseModel):
     password : str
 
 class UserData(BaseModel):
-    # barcode : str
+    barcode : str
     expiry_date : str
     userid : str
 
@@ -38,4 +38,22 @@ class FoodStatus(BaseModel):
     inventory_id : int
     status : str
     notes : str
+
+class AdminVerifyItem(BaseModel):
+    barcode : str
+
+class GrocerySuggestion(BaseModel):
+    id: int
+    name: str
+    category: str
+    suggested: bool
+    quantity: int
+    unit: str
+    priority: str
+    reason: str
+    confidence: float
+
+class ModelTrainingResponse(BaseModel):
+    success: bool
+    message: str
 

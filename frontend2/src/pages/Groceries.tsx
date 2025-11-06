@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
+import { apiService } from "../services/api"
 import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon } from "@heroicons/react/24/outline"
 
 interface GroceryItem {
@@ -13,6 +14,7 @@ interface GroceryItem {
   unit: string
   priority: "high" | "medium" | "low"
   reason: string
+  confidence?: number
 }
 
 export default function Groceries() {
@@ -29,74 +31,22 @@ export default function Groceries() {
     if (!user?.userid) return
 
     try {
-      // In a real app, this would analyze user's inventory and consumption patterns
-      // For now, we'll generate mock suggestions
-      const mockSuggestions: GroceryItem[] = [
-        {
-          id: 1,
-          name: "Milk",
-          category: "Dairy",
-          suggested: true,
-          quantity: 1,
-          unit: "liter",
-          priority: "high",
-          reason: "You usually buy milk every week",
-        },
-        {
-          id: 2,
-          name: "Bread",
-          category: "Bakery",
-          suggested: true,
-          quantity: 1,
-          unit: "loaf",
-          priority: "high",
-          reason: "Running low based on consumption pattern",
-        },
-        {
-          id: 3,
-          name: "Bananas",
-          category: "Fruits",
-          suggested: true,
-          quantity: 6,
-          unit: "pieces",
-          priority: "medium",
-          reason: "Good source of potassium, expires soon",
-        },
-        {
-          id: 4,
-          name: "Chicken Breast",
-          category: "Meat",
-          suggested: true,
-          quantity: 500,
-          unit: "grams",
-          priority: "medium",
-          reason: "Protein for suggested recipes",
-        },
-        {
-          id: 5,
-          name: "Rice",
-          category: "Grains",
-          suggested: true,
-          quantity: 1,
-          unit: "kg",
-          priority: "low",
-          reason: "Pantry staple running low",
-        },
-        {
-          id: 6,
-          name: "Tomatoes",
-          category: "Vegetables",
-          suggested: true,
-          quantity: 4,
-          unit: "pieces",
-          priority: "medium",
-          reason: "Needed for suggested recipes",
-        },
-      ]
-
-      setGroceryList(mockSuggestions)
+      setLoading(true)
+      console.log("Fetching grocery suggestions for user:", user.userid)
+      
+      const response = await apiService.getGrocerySuggestions(user.userid)
+      console.log("Grocery suggestions response:", response.data)
+      
+      if (response.data && response.data.suggestions) {
+        setGroceryList(response.data.suggestions)
+      } else {
+        // Fallback to empty list if no suggestions
+        setGroceryList([])
+      }
     } catch (error) {
       console.error("Error generating grocery suggestions:", error)
+      // Fallback to empty list on error
+      setGroceryList([])
     } finally {
       setLoading(false)
     }
@@ -172,6 +122,27 @@ export default function Groceries() {
               <div key={i} className="bg-gray-200 h-20 rounded-lg"></div>
             ))}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (groceryList.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <ShoppingCartIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No grocery suggestions available</h2>
+          <p className="text-gray-600 mb-4">
+            We need more consumption data to provide personalized grocery suggestions. 
+            Start by consuming items from your inventory!
+          </p>
+          <button
+            onClick={generateGrocerySuggestions}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            Refresh Suggestions
+          </button>
         </div>
       </div>
     )

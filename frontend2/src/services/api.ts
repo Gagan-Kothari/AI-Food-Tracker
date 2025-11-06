@@ -1,7 +1,6 @@
 import axios from "axios"
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
-const API_BASE_URL = "http://localhost:8000"
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -38,10 +37,18 @@ export const apiService = {
 
 
   // Scan item
-  scanItem: (expiry_date: string, userid: string) => api.post("/item/scan", { expiry_date, userid }),
+  scanItem: (barcode: string, expiry_date: string, userid: string) => api.post("/item/scan", { barcode, expiry_date, userid }),
 
   // Recipe suggestions
   getRecipeSuggestions: (ingredients: string[]) => api.post("/user/recipe/suggestions", { ingredients }),
+  getInventoryBasedRecipes: (userid: string) => api.post("/user/recipe/inventory-based", { userid }),
+
+  // Grocery suggestions
+  getGrocerySuggestions: (userid: string) => api.post("/user/grocery-suggestions", { userid }),
+
+  // Model training
+  trainModels: () => api.post("/admin/train-models"),
+  retrainUserModel: (userid: string) => api.post("/user/retrain-model", { userid }),
 
   // Verify item by barcode
   verifyItem: (barcode: string) => api.post("/admin/verifyitem", { barcode }),

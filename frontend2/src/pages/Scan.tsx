@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { apiService } from "../services/api"
 import { CameraIcon } from "@heroicons/react/24/outline"
+import BarcodeScanner from "../components/BarcodeScanner"
 
 export default function Scan() {
   const { user } = useAuth()
@@ -11,37 +12,61 @@ export default function Scan() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [scannedProduct, setScannedProduct] = useState<any>(null)
+  const [showScanner, setShowScanner] = useState(false)
+  const [scannedBarcode, setScannedBarcode] = useState("")
 
-  const scanBarcode = async () => {
+  const handleBarcodeDetected = async (barcode: string) => {
+    setScannedBarcode(barcode)
+    setShowScanner(false)
+    
     if (!user?.userid || !expiryDate) {
       setMessage("Please select an expiry date first")
       return
     }
 
     setLoading(true)
-    setMessage("Opening camera for barcode scanning...")
+    setMessage("Processing barcode...")
     
     try {
-      const response = await apiService.scanItem(expiryDate, user.userid)
-      if (response.data.message === "success") {
-        setMessage("Item added to inventory successfully!")
-        // Reset form
-        setExpiryDate("")
-        setScannedProduct(null)
+      // First, verify the item with the barcode
+      const verifyResponse = await apiService.verifyItem(barcode)
+      
+      if (verifyResponse.data && verifyResponse.data.code) {
+        // Item found, add to inventory
+        const response = await apiService.scanItem(barcode, expiryDate, user.userid)
+        if (response.data.message === "success") {
+          setMessage("Item added to inventory successfully!")
+          setScannedProduct(verifyResponse.data)
+          // Reset form
+          setExpiryDate("")
+          setScannedBarcode("")
+        } else {
+          setMessage("Failed to add item to inventory")
+        }
       } else {
-        setMessage("Failed to add item to inventory")
+        setMessage("Item not found in database. Please try a different barcode.")
       }
     } catch (error) {
       console.error("Scan error:", error)
-      setMessage("Error scanning barcode. Please try again.")
+      setMessage("Error processing barcode. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
+  const startScanning = () => {
+    if (!expiryDate) {
+      setMessage("Please select an expiry date first")
+      return
+    }
+    setShowScanner(true)
+    setMessage("")
+  }
+
   const resetForm = () => {
     setExpiryDate("")
     setScannedProduct(null)
+    setScannedBarcode("")
     setMessage("")
   }
 
@@ -73,11 +98,11 @@ export default function Scan() {
           </div>
 
           <button
-            onClick={scanBarcode}
+            onClick={startScanning}
             disabled={loading || !expiryDate}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
           >
-            {loading ? "Scanning..." : "Scan Barcode & Add to Inventory"}
+            {loading ? "Processing..." : "Scan Barcode & Add to Inventory"}
           </button>
 
           {message && (
@@ -100,6 +125,13 @@ export default function Scan() {
           )}
         </div>
       </div>
+
+      {showScanner && (
+        <BarcodeScanner
+          onBarcodeDetected={handleBarcodeDetected}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   )
 }

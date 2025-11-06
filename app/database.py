@@ -7,13 +7,15 @@ import os
 # Load .env file first
 load_dotenv()
 
-# Use AWS RDS as default, only override if .env file has a different value
-DATABASE_URL = "postgresql+psycopg2://ghh:5XS9Nx6QWgxdlt2GZ8us@ai-food-app.cpyg4i0yu30w.ap-south-1.rds.amazonaws.com:5432/postgres"
-
-# Check if .env file has a different DATABASE_URL
+# Use SQLite for local development, fallback to AWS RDS if needed
+# Check if .env file has a DATABASE_URL
 env_database_url = os.getenv("DATABASE_URL")
-if env_database_url and not env_database_url.startswith("postgresql://localhost"):
+
+if env_database_url:
     DATABASE_URL = env_database_url
+else:
+    # Default to SQLite for local development
+    DATABASE_URL = "sqlite:///./food_tracker.db"
 
 # print(DATABASE_URL)
 
