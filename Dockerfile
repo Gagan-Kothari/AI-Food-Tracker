@@ -6,25 +6,19 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PIP_NO_CACHE_DIR=1
 
-# Copy requirements first for better caching
-COPY requirements.txt /app/requirements.txt
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt .
 
-# Verify requirements.txt exists and install dependencies
-RUN echo "Checking requirements.txt..." && \
-    ls -la /app/requirements.txt && \
-    cat /app/requirements.txt && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir -r /app/requirements.txt && \
-    echo "Verifying installations..." && \
-    pip list | grep -i fastapi && \
-    pip list | grep -i uvicorn
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . /app
+COPY . .
 
-# Expose port
+# Expose port (Railway will set PORT env variable)
 EXPOSE 8000
 
-# Start command (PORT will be set by Railway as environment variable)
-CMD sh -c "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+# Start command - Railway sets PORT automatically
+CMD python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
 
