@@ -4,10 +4,13 @@ import type React from "react"
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { AuthProvider } from "./contexts/AuthContext"
+import { AdminProvider, useAdmin } from "./contexts/AdminContext"
 import { useAuth } from "./contexts/AuthContext"
 import Navbar from "./components/Navbar"
 import Footer from "./components/Footer"
 import Login from "./pages/Login"
+import AdminLogin from "./pages/AdminLogin"
+import AdminDashboard from "./pages/AdminDashboard"
 import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
 import Scan from "./pages/Scan"
@@ -33,13 +36,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user } = useAuth()
+  const { admin } = useAdmin()
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {user && <Navbar />}
-      <main className={user ? "pt-16" : ""}>
+      {user && !admin && <Navbar />}
+      <main className={user && !admin ? "pt-16" : ""}>
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+          <Route path="/admin/login" element={admin ? <Navigate to="/admin" /> : <AdminLogin />} />
+          <Route path="/admin" element={admin ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
           <Route path="/signup" element={user ? <Navigate to="/dashboard" /> : <Signup />} />
           <Route
             path="/dashboard"
@@ -89,10 +95,10 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+          <Route path="/" element={<Navigate to={user ? "/dashboard" : admin ? "/admin" : "/login"} />} />
         </Routes>
       </main>
-      {user && <Footer />}
+      {user && !admin && <Footer />}
     </div>
   )
 }
@@ -100,9 +106,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
+      <AdminProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AdminProvider>
     </AuthProvider>
   )
 }

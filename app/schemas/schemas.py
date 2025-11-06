@@ -57,3 +57,13 @@ class ModelTrainingResponse(BaseModel):
     success: bool
     message: str
 
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+class AdminAddInventoryRequest(BaseModel):
+    userid: int
+    barcode: str
+    expiry_date: str

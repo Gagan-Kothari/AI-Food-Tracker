@@ -54,9 +54,17 @@ export const apiService = {
   getGrocerySuggestions: (userid: string) => api.post("/user/grocery-suggestions", { userid }),
 
   // Model training
-  trainModels: () => api.post("/admin/train-models"),
+  trainModels: (adminToken?: string) => api.post("/admin/train-models", {}, { headers: { "x-admin-token": adminToken || "" } }),
   retrainUserModel: (userid: string) => api.post("/user/retrain-model", { userid }),
 
   // Verify item by barcode
   verifyItem: (barcode: string) => api.post("/admin/verifyitem", { barcode }),
+
+  // Admin
+  adminLogin: (username: string, password: string) => api.post("/admin/login", { username, password }),
+  adminListUsers: (adminToken: string) => api.get("/admin/users", { headers: { "x-admin-token": adminToken } }),
+  adminAddInventory: (adminToken: string, userid: number, barcode: string, expiry_date: string) =>
+    api.post("/admin/inventory/add", { userid, barcode, expiry_date }, { headers: { "x-admin-token": adminToken } }),
+  adminRetrainUser: (adminToken: string, userid: number) =>
+    api.post("/admin/user/retrain", { userid }, { headers: { "x-admin-token": adminToken } }),
 }
