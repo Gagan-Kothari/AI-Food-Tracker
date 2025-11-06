@@ -7,13 +7,12 @@ app = FastAPI()
 app.include_router(routes.router)
 
 origins = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:5174",  # Vite dev server (alternative port)
+    "*",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # You can also use ["*"] to allow all
+    allow_origins=origins,  # Using ["*"] to allow all for deployment on Vercel
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods: POST, GET, OPTIONS, etc.
     allow_headers=["*"],
