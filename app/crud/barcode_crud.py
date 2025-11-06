@@ -1,6 +1,12 @@
 import requests
-import cv2
-from pyzbar import pyzbar
+try:
+    import cv2  # type: ignore
+except Exception:  # pragma: no cover
+    cv2 = None
+try:
+    from pyzbar import pyzbar  # type: ignore
+except Exception:  # pragma: no cover
+    pyzbar = None
 from dotenv import load_dotenv
 import os
 import re
@@ -186,6 +192,8 @@ def scan_barcode_live():
     Returns:
         str: Barcode data or None if not found
     """
+    if cv2 is None or pyzbar is None:
+        return None
     cap = cv2.VideoCapture(0)
 
     while True:
@@ -222,6 +230,8 @@ def opencv_scan_barcode(image):
     Args:
         image: Image filename (without extension)
     """
+    if cv2 is None or pyzbar is None:
+        return None
     frame = cv2.imread(f"./ai_food_tracker/app/images/{image}.jpg")
 
     barcodes = pyzbar.decode(frame)
