@@ -4,6 +4,13 @@ from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Ensure tables exist in the configured DATABASE_URL
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception:
+    # If migration tool manages schema, ignore
+    pass
 app.include_router(routes.router)
 
 origins = [
