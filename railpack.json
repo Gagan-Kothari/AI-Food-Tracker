@@ -1,16 +1,13 @@
 {
-  "$schema": "https://schema.railpack.com",
   "provider": "python",
   "packages": {
     "python": "3.13"
   },
-  "steps": {
-    "install": {
-      "commands": [
-        "pip install --upgrade pip",
-        "pip install -r requirements.txt"
-      ]
-    }
+  "build": {
+    "commands": [
+      "pip install --upgrade pip",
+      "pip install -r requirements.txt"
+    ]
   }
 }
 
