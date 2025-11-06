@@ -11,12 +11,12 @@ export default function Scan() {
   const [expiryDate, setExpiryDate] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
-  const [scannedProduct, setScannedProduct] = useState<any>(null)
+  
   const [showScanner, setShowScanner] = useState(false)
-  const [scannedBarcode, setScannedBarcode] = useState("")
+  
 
   const handleBarcodeDetected = async (barcode: string) => {
-    setScannedBarcode(barcode)
+    
     setShowScanner(false)
     
     if (!user?.userid || !expiryDate) {
@@ -36,10 +36,10 @@ export default function Scan() {
         const response = await apiService.scanItem(barcode, expiryDate, user.userid)
         if (response.data.message === "success") {
           setMessage("Item added to inventory successfully!")
-          setScannedProduct(verifyResponse.data)
+          
           // Reset form
           setExpiryDate("")
-          setScannedBarcode("")
+          
         } else {
           setMessage("Failed to add item to inventory")
         }
@@ -65,8 +65,7 @@ export default function Scan() {
 
   const resetForm = () => {
     setExpiryDate("")
-    setScannedProduct(null)
-    setScannedBarcode("")
+    
     setMessage("")
   }
 

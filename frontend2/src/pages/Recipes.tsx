@@ -33,7 +33,7 @@ interface Recipe {
 export default function Recipes() {
   const { user } = useAuth()
   const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [inventory, setInventory] = useState<any[]>([])
+  const [inventory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
@@ -102,7 +102,7 @@ export default function Recipes() {
     }
   }
 
-  const handleCookedRecipe = (recipeId: number) => {
+  const handleCookedRecipe = () => {
     // In a real app, this would log the recipe as cooked
     alert("Great! Recipe marked as cooked. This helps us improve our suggestions.")
   }
@@ -281,7 +281,7 @@ export default function Recipes() {
                     View Recipe
                   </button>
                   <button
-                    onClick={() => handleCookedRecipe(recipe.id)}
+                    onClick={() => handleCookedRecipe()}
                     className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
                   >
                     I Cooked This!
@@ -344,7 +344,7 @@ export default function Recipes() {
 
               <div className="mt-6 pt-6 border-t">
                 <button
-                  onClick={() => handleCookedRecipe(selectedRecipe.id)}
+                  onClick={() => handleCookedRecipe()}
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
                 >
                   Mark as Cooked
