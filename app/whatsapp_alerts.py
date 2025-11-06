@@ -120,11 +120,31 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         
         # Send request
         print(f"DEBUG: ========== Sending Request ==========")
-        response = requests.post(url, json=payload, headers=headers)
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+        except requests.exceptions.RequestException as e:
+            print(f"ERROR: Request failed: {str(e)}")
+            return {
+                "status": False,
+                "message": f"Failed to send request: {str(e)}"
+            }
         
         print(f"DEBUG: Response status code: {response.status_code}")
         print(f"DEBUG: Response headers: {dict(response.headers)}")
         print(f"DEBUG: Response content: {response.text}")
+        
+        # Check for token expiration warnings
+        if 'x-ad-api-version-warning' in response.headers:
+            warning = response.headers.get('x-ad-api-version-warning', '')
+            print(f"WARNING: API version warning: {warning}")
+        
+        # Check for rate limiting
+        if response.status_code == 429:
+            print(f"ERROR: Rate limit exceeded. Wait before sending more messages.")
+            return {
+                "status": False,
+                "message": "Rate limit exceeded. Please wait before sending more messages."
+            }
         
         # Compare with test template
         print(f"DEBUG: ========== Comparison with Test Template ==========")
@@ -147,13 +167,20 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             # Check if the phone number was recognized by WhatsApp
             if not wa_id:
                 print(f"WARNING: WhatsApp did not return a wa_id. This might mean the number is not registered with WhatsApp or not added as a test number.")
+            else:
+                print(f"INFO: Message accepted by WhatsApp API. If not received, check:")
+                print(f"  1. WhatsApp spam/archived messages")
+                print(f"  2. Access token expiration (temporary tokens expire in 24 hours)")
+                print(f"  3. Meta Business Suite for delivery status")
+                print(f"  4. Wait 1-2 minutes for delivery (can be delayed)")
             
             return {
                 "status": True,
                 "message": "WhatsApp alert sent successfully",
                 "message_id": message_id,
                 "wa_id": wa_id,
-                "contact_info": contact_info
+                "contact_info": contact_info,
+                "note": "If message not received, check WhatsApp spam/archived or verify access token hasn't expired"
             }
         else:
             error_data = response.json() if response.content else {}
