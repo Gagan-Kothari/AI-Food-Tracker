@@ -114,7 +114,7 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         # Create a mapping of inventory items by name (case-insensitive)
         inventory_map = {}
         for item in inventory_data:
-            item_name = item.get("f_name", "").lower()
+            item_name = (item.get("f_name") or "").lower()
             if item_name:
                 if item_name not in inventory_map:
                     inventory_map[item_name] = []
@@ -133,7 +133,7 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             items_expiring_soon = 0  # Items expiring in 7 days or less
             
             for used_ing in recipe.get("usedIngredients", []):
-                ing_name = used_ing.get("name", "").lower()
+                ing_name = (used_ing.get("name") or "").lower()
                 used_ing_enhanced = used_ing.copy()
                 
                 # Find matching inventory item
@@ -144,13 +144,17 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                     # Sort by expiry date (soonest first)
                     inventory_items_sorted = sorted(
                         inventory_items,
-                        key=lambda x: datetime.strptime(x.get("expiry_date", "9999-12-31"), "%Y-%m-%d").date()
+                        key=lambda x: datetime.strptime(x.get("expiry_date") or "9999-12-31", "%Y-%m-%d").date()
                     )
                     inventory_match = inventory_items_sorted[0]
                 
                 if inventory_match:
-                    expiry_date = datetime.strptime(inventory_match.get("expiry_date", ""), "%Y-%m-%d").date()
-                    days_until_expiry = (expiry_date - today).days
+                    expiry_date_str = inventory_match.get("expiry_date") or ""
+                    if expiry_date_str:
+                        expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
+                        days_until_expiry = (expiry_date - today).days
+                    else:
+                        days_until_expiry = None
                     
                     used_ing_enhanced.update({
                         "inventory_id": inventory_match.get("inventory_id"),
@@ -162,10 +166,11 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                     })
                     
                     # Track expiry information for prioritization
-                    if days_until_expiry <= 7:
-                        items_expiring_soon += 1
-                    if days_until_expiry >= 0:  # Not expired
-                        total_days_until_expiry += days_until_expiry
+                    if days_until_expiry is not None:
+                        if days_until_expiry <= 7:
+                            items_expiring_soon += 1
+                        if days_until_expiry >= 0:  # Not expired
+                            total_days_until_expiry += days_until_expiry
                 else:
                     used_ing_enhanced.update({
                         "available": True,  # Still available, just not in our inventory tracking
@@ -257,7 +262,7 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             "inventory_summary": {
                 "total_items": len(inventory_data),
                 "expiring_soon": len([item for item in inventory_data 
-                                     if datetime.strptime(item.get("expiry_date", "9999-12-31"), "%Y-%m-%d").date() <= today + timedelta(days=7)])
+                                     if datetime.strptime(item.get("expiry_date") or "9999-12-31", "%Y-%m-%d").date() <= today + timedelta(days=7)])
             }
         }
         
