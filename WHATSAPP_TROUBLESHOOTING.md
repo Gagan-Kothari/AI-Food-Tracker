@@ -81,17 +81,40 @@ UPDATE users SET phone_number = '+919943434...' WHERE id = YOUR_USER_ID;
 - ❌ Wrong: `+91 9876543210` (has space)
 - ❌ Wrong: `9876543210` (missing country code)
 
-### Issue 3: Phone Number Not Added as Test Number
+### Issue 3: API Returns Success But No Message Received
 
-**Symptom:** Error code 1008 or "Invalid recipient phone number"
+**Symptom:** Logs show `SUCCESS: WhatsApp message sent` with status 200, but no message on phone
+
+**This is the most common issue!** The API accepts the message, but WhatsApp can't deliver it.
 
 **Solution:**
-1. Go to Meta for Developers → WhatsApp → API Setup
-2. Scroll to "To" section
-3. Click "Add phone number" → "Add test number"
-4. Enter your phone number in E.164 format: `+919943434...`
-5. Verify with the code sent to your WhatsApp
-6. **Important:** The phone number in your database must match exactly the test number you added
+1. **Verify test number in Meta:**
+   - Go to Meta for Developers → WhatsApp → API Setup
+   - Scroll to "To" section (or "Test phone numbers")
+   - Check if your phone number `+919811546101` is listed there
+   - If not, click "Add phone number" → "Add test number"
+   - Enter: `+919811546101` (exactly as in database)
+   - Verify with code sent to WhatsApp
+
+2. **Check phone number format:**
+   - Database: `+919811546101` ✅ (correct format)
+   - Must match test number in Meta exactly
+   - No spaces, dashes, or extra characters
+
+3. **Verify the number is registered with WhatsApp:**
+   - The phone number must be registered with WhatsApp
+   - You should be able to receive messages on this number normally
+
+4. **Check Meta Business Suite:**
+   - Go to https://business.facebook.com/
+   - Check message logs to see delivery status
+   - Look for any error messages
+
+**Common causes:**
+- Phone number not added as test number in Meta
+- Phone number format mismatch (database vs Meta)
+- Phone number not registered with WhatsApp
+- Test number verification expired (re-verify if needed)
 
 ### Issue 4: Credentials Not Set
 
@@ -168,7 +191,13 @@ DEBUG: Sending WhatsApp message to: +919943434...
 DEBUG: WhatsApp API URL: https://graph.facebook.com/v21.0/...
 DEBUG: Response status code: 200
 SUCCESS: WhatsApp message sent. Message ID: wamid.xxx...
+SUCCESS: WhatsApp ID (wa_id): 919943434...
+SUCCESS: Contact info: {'input': '+919943434...', 'wa_id': '919943434...'}
 ```
+
+**Important:** If you see `SUCCESS` but no `wa_id`, it means:
+- The API accepted the message
+- But WhatsApp couldn't deliver it (number not registered or not added as test number)
 
 ## Expected Log Output (Error)
 

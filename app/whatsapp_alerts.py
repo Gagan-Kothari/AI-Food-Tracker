@@ -70,8 +70,15 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             }
         
         formatted_phone = format_phone_number(to_phone)
-        print(f"DEBUG: Sending WhatsApp message to: {formatted_phone}")
+        
+        # WhatsApp API expects phone number WITHOUT the + sign
+        # Remove + if present (format: 919811546101 instead of +919811546101)
+        whatsapp_phone = formatted_phone.lstrip('+')
+        
+        print(f"DEBUG: Sending WhatsApp message to: {whatsapp_phone}")
         print(f"DEBUG: Original phone number: {to_phone}")
+        print(f"DEBUG: Formatted (with +): {formatted_phone}")
+        print(f"DEBUG: WhatsApp format (no +): {whatsapp_phone}")
         print(f"DEBUG: Message preview: {message[:50]}...")
         
         # WhatsApp Cloud API endpoint
@@ -84,10 +91,11 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         }
         
         # Request payload
+        # Note: WhatsApp API expects phone number WITHOUT + sign (e.g., "919811546101" not "+919811546101")
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
-            "to": formatted_phone,
+            "to": whatsapp_phone,
             "type": "text",
             "text": {
                 "preview_url": False,
@@ -106,11 +114,24 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         
         if response.status_code == 200:
             response_data = response.json()
-            print(f"SUCCESS: WhatsApp message sent. Message ID: {response_data.get('messages', [{}])[0].get('id', '')}")
+            message_id = response_data.get("messages", [{}])[0].get("id", "")
+            contact_info = response_data.get("contacts", [{}])[0] if response_data.get("contacts") else {}
+            wa_id = contact_info.get("wa_id", "")
+            
+            print(f"SUCCESS: WhatsApp message sent. Message ID: {message_id}")
+            print(f"SUCCESS: WhatsApp ID (wa_id): {wa_id}")
+            print(f"SUCCESS: Contact info: {contact_info}")
+            
+            # Check if the phone number was recognized by WhatsApp
+            if not wa_id:
+                print(f"WARNING: WhatsApp did not return a wa_id. This might mean the number is not registered with WhatsApp or not added as a test number.")
+            
             return {
                 "status": True,
                 "message": "WhatsApp alert sent successfully",
-                "message_id": response_data.get("messages", [{}])[0].get("id", "")
+                "message_id": message_id,
+                "wa_id": wa_id,
+                "contact_info": contact_info
             }
         else:
             error_data = response.json() if response.content else {}
