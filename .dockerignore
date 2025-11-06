@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+node_modules/
+frontend2/
+dist/
+build/
+*.log
+.env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Alembic (keep migrations, ignore cache)
+alembic/versions/__pycache__/
+
+# Models
+aimodels/
+
+# Backup files
+*.backup
+*.bak
+*_backup/
+
+# Railway/Railpack configs (if using Dockerfile)
+railpack.json
+Procfile
+runtime.txt
+
