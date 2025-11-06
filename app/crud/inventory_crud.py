@@ -89,13 +89,13 @@ def user_inventory(userid: int, db, foodstatus, inventory):
                 "inventory_id": inventory_item.id,
                 "expiry_date": inventory_item.expiry_date.strftime("%Y-%m-%d"),
                 "f_id": inventory_item.f_id,
-                "f_name": food_item.f_name,
-                "brands": food_item.brands,
-                "quantity": food_item.quantity,
-                "energy": food_item.energy,
-                "category": food_item.category,
-                "categorystatus": food_item.categorystatus,
-                "imageurl": food_item.imageurl,
+                "f_name": food_item.f_name or "",
+                "brands": food_item.brands or "",
+                "quantity": food_item.quantity or "",
+                "energy": food_item.energy or 0,
+                "category": food_item.category or "",
+                "categorystatus": food_item.categorystatus or False,
+                "imageurl": food_item.imageurl or "",
             })
 
         return inventory_data
