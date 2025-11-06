@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [addForm, setAddForm] = useState({ userid: "", barcode: "", expiry_date: "" })
+  const [foodItemForm, setFoodItemForm] = useState({ barcode: "", f_name: "", brands: "", quantity: "", energy: "", category: "" })
+  const [categories, setCategories] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const adminUserid = user ? Number(user.userid) : 0
 
@@ -36,7 +38,18 @@ export default function AdminDashboard() {
         setLoadingUsers(false)
       }
     }
-    if (adminUserid > 0) load()
+    const loadCategories = async () => {
+      try {
+        const res = await apiService.getCategories()
+        setCategories(res.data.categories || [])
+      } catch {
+        // ignore
+      }
+    }
+    if (adminUserid > 0) {
+      load()
+      loadCategories()
+    }
   }, [adminUserid, user, navigate])
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -72,6 +85,32 @@ export default function AdminDashboard() {
       alert("Training triggered for all users")
     } catch {
       alert("Failed to trigger training")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleAddFoodItem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setBusy(true)
+    try {
+      const response = await apiService.adminAddFoodItem(
+        adminUserid,
+        foodItemForm.barcode,
+        foodItemForm.f_name,
+        foodItemForm.brands,
+        foodItemForm.quantity,
+        foodItemForm.energy ? parseInt(foodItemForm.energy) : null,
+        foodItemForm.category
+      )
+      if (response.data.status) {
+        alert("Food item added to database successfully!")
+        setFoodItemForm({ barcode: "", f_name: "", brands: "", quantity: "", energy: "", category: "" })
+      } else {
+        alert(response.data.message || "Failed to add food item")
+      }
+    } catch {
+      alert("Failed to add food item")
     } finally {
       setBusy(false)
     }
@@ -125,6 +164,44 @@ export default function AdminDashboard() {
               </table>
             </div>
           )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Add Food Item To Database</h2>
+          <form onSubmit={handleAddFoodItem} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Barcode *</label>
+                <input className="w-full border rounded px-3 py-2" placeholder="Barcode" value={foodItemForm.barcode} onChange={e => setFoodItemForm(s => ({ ...s, barcode: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Food Name *</label>
+                <input className="w-full border rounded px-3 py-2" placeholder="Food Name" value={foodItemForm.f_name} onChange={e => setFoodItemForm(s => ({ ...s, f_name: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
+                <input className="w-full border rounded px-3 py-2" placeholder="Brand" value={foodItemForm.brands} onChange={e => setFoodItemForm(s => ({ ...s, brands: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                <input className="w-full border rounded px-3 py-2" placeholder="e.g., 100g, 250ml" value={foodItemForm.quantity} onChange={e => setFoodItemForm(s => ({ ...s, quantity: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Energy (kcal/100g) - Optional</label>
+                <input type="number" className="w-full border rounded px-3 py-2" placeholder="Energy" value={foodItemForm.energy} onChange={e => setFoodItemForm(s => ({ ...s, energy: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                <select className="w-full border rounded px-3 py-2" value={foodItemForm.category} onChange={e => setFoodItemForm(s => ({ ...s, category: e.target.value }))} required>
+                  <option value="">Select a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button type="submit" disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Add Food Item</button>
+          </form>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">

@@ -67,4 +67,13 @@ export const apiService = {
   adminRetrainUser: (adminUserid: number, targetUserid: number) =>
     api.post("/admin/user/retrain", { admin_userid: adminUserid, target_userid: targetUserid }),
   adminTrainAll: (adminUserid: number) => api.post("/admin/train-models", { userid: adminUserid }),
+  adminAddFoodItem: (adminUserid: number, barcode: string, f_name: string, brands: string, quantity: string, energy: number | null, category: string) =>
+    api.post("/admin/food-item/add", { admin_userid: adminUserid, barcode, f_name, brands, quantity, energy, category }),
+
+  // Manual item entry
+  manualAddItem: (barcode: string, f_name: string, brands: string, quantity: string, energy: number | null, category: string, expiry_date: string, userid: string) =>
+    api.post("/item/manual-add", { barcode, f_name, brands, quantity, energy, category, expiry_date, userid }),
+
+  // Get categories
+  getCategories: () => api.get("/categories"),
 }

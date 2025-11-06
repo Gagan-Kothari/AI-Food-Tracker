@@ -72,3 +72,22 @@ class AdminAddInventoryRequest(BaseModel):
 class AdminRetrainRequest(BaseModel):
     admin_userid: int  # Admin's user ID for verification
     target_userid: int  # Target user's ID to retrain model for
+
+class ManualFoodItemRequest(BaseModel):
+    barcode: str
+    f_name: str
+    brands: str
+    quantity: str
+    energy: int | None = None  # Optional
+    category: str
+    expiry_date: str
+    userid: str
+
+class AdminAddFoodItemRequest(BaseModel):
+    admin_userid: int  # Admin's user ID for verification
+    barcode: str
+    f_name: str
+    brands: str
+    quantity: str
+    energy: int | None = None  # Optional
+    category: str

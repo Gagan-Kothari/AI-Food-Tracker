@@ -10,7 +10,9 @@ from .inventory_crud import (
     add_to_database,
     user_inventory,
     delete_inventory_item,
-    check_and_move_expired_items
+    check_and_move_expired_items,
+    check_barcode_in_database,
+    add_food_item_to_database
 )
 
 # Food status tracking functions
@@ -50,6 +52,8 @@ __all__ = [
     "user_inventory",
     "delete_inventory_item",
     "check_and_move_expired_items",
+    "check_barcode_in_database",
+    "add_food_item_to_database",
     
     # Food status functions
     "update_food_status",

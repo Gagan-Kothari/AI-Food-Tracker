@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import models
 from datetime import datetime
+from app.crud.barcode_crud import find_categories
 
 
 def add_to_database(db: Session, data, expirydate, user_id):
@@ -133,6 +134,87 @@ def delete_inventory_item(db: Session, inventory_id: int, user_id: int):
         
     except Exception as e:
         return {"message": "Failed to delete item", "error": str(e), "status": False}
+
+
+def check_barcode_in_database(db: Session, barcode: str):
+    """
+    Check if a barcode exists in the food_items database.
+    
+    Args:
+        db: Database session
+        barcode: Barcode to check
+        
+    Returns:
+        dict: Food item data if found, None otherwise
+    """
+    try:
+        f_id = int(barcode)
+        food_item = db.query(models.Food_Items).filter(models.Food_Items.f_id == f_id).first()
+        
+        if food_item:
+            return {
+                "code": str(food_item.f_id),
+                "product_name_en": food_item.f_name,
+                "brands": food_item.brands,
+                "quantity": food_item.quantity,
+                "energy_kcal_100g": food_item.energy,
+                "category": food_item.category,
+                "categorystatus": food_item.categorystatus,
+                "imageurl": food_item.imageurl
+            }
+        return None
+    except (ValueError, TypeError):
+        return None
+
+
+def add_food_item_to_database(db: Session, barcode: str, f_name: str, brands: str, 
+                              quantity: str, energy: int, category: str):
+    """
+    Add a food item directly to the food_items table.
+    
+    Args:
+        db: Database session
+        barcode: Barcode (f_id)
+        f_name: Food name
+        brands: Brand name
+        quantity: Quantity
+        energy: Energy value (kcal per 100g)
+        category: Category name
+        
+    Returns:
+        dict: Success/failure message
+    """
+    try:
+        f_id = int(barcode)
+        
+        # Check if item already exists
+        existing_item = db.query(models.Food_Items).filter(models.Food_Items.f_id == f_id).first()
+        if existing_item:
+            return {"message": "Food item already exists", "status": False}
+        
+        # Determine categorystatus based on category using find_categories
+        category_data = find_categories([category], category, f_name)
+        categorystatus = category_data.get("categorystatus", False) if category_data else False
+        
+        food_item = models.Food_Items(
+            f_id=f_id,
+            f_name=f_name,
+            brands=brands,
+            quantity=quantity,
+            energy=energy or 0,
+            category=category,
+            categorystatus=categorystatus,
+            imageurl=None  # Leave blank as requested
+        )
+        
+        db.add(food_item)
+        db.commit()
+        db.refresh(food_item)
+        
+        return {"message": "Food item added successfully", "status": True}
+        
+    except Exception as e:
+        return {"message": f"Failed to add food item: {str(e)}", "status": False}
 
 
 def check_and_move_expired_items(db: Session, user_id: int = None):
