@@ -131,7 +131,7 @@ async def get_recipe_suggestions(ingredients: Ingredients):
     return get_recipes(ingredients.ingredients)
 
 @router.post("/user/recipe/inventory-based")
-async def get_inventory_based_recipe_suggestions(request: dict, db: Session = Depends(get_db)):
+async def get_inventory_based_recipe_suggestions(request: RecipeRequest, db: Session = Depends(get_db)):
     """
     Get recipe suggestions based on user inventory.
     
@@ -139,9 +139,23 @@ async def get_inventory_based_recipe_suggestions(request: dict, db: Session = De
     - userid: User ID
     - recipe_type: "indian", "foreign", or "both" (default: "foreign")
     """
-    user_id = int(request.get("userid"))
-    recipe_type = request.get("recipe_type", "foreign")
-    return get_inventory_based_recipes(user_id, db, recipe_type=recipe_type)
+    try:
+        user_id = request.userid
+        recipe_type = request.recipe_type or "foreign"
+        print(f"DEBUG: Route received request - user_id: {user_id}, recipe_type: {recipe_type}")
+        result = get_inventory_based_recipes(user_id, db, recipe_type=recipe_type)
+        print(f"DEBUG: Route returning result with success: {result.get('success', False)}")
+        return result
+    except Exception as e:
+        print(f"ERROR: Exception in get_inventory_based_recipe_suggestions: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": f"Failed to fetch recipes: {str(e)}",
+            "recipes": [],
+            "ingredients_used": []
+        }
  
 
 @router.post("/user/expiry_alerts")

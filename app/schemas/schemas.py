@@ -34,6 +34,10 @@ class Ingredients(BaseModel):
 class UserIdRequest(BaseModel):
     userid: int
 
+class RecipeRequest(BaseModel):
+    userid: int
+    recipe_type: str = "foreign"  # "indian", "foreign", or "both"
+
 class FoodStatus(BaseModel):
     inventory_id : int
     status : str

@@ -75,6 +75,7 @@ def load_indian_recipes():
         df['ingredients_clean'] = df['ingredients'].apply(clean_ingredients)
         
         # Create TF-IDF vectorizer for ingredient matching
+        global INDIAN_RECIPES_VECTORIZER, INDIAN_RECIPES_TFIDF
         INDIAN_RECIPES_VECTORIZER = TfidfVectorizer(
             lowercase=True,
             token_pattern=r'\b\w+\b',
@@ -88,13 +89,35 @@ def load_indian_recipes():
         
         INDIAN_RECIPES_DATA = df
         print(f"DEBUG: Loaded {len(df)} Indian recipes")
+        print(f"DEBUG: Vectorizer initialized: {INDIAN_RECIPES_VECTORIZER is not None}")
+        print(f"DEBUG: TF-IDF matrix shape: {INDIAN_RECIPES_TFIDF.shape if INDIAN_RECIPES_TFIDF is not None else 'None'}")
         
         return df
         
     except Exception as e:
         print(f"ERROR: Failed to load Indian recipes: {str(e)}")
-        # Return sample dataset on error
-        return create_sample_indian_recipes()
+        import traceback
+        traceback.print_exc()
+        # Return sample dataset on error and try to initialize it
+        try:
+            df = create_sample_indian_recipes()
+            # Initialize vectorizer for sample data
+            global INDIAN_RECIPES_VECTORIZER, INDIAN_RECIPES_TFIDF
+            df['ingredients_clean'] = df['ingredients'].apply(clean_ingredients)
+            INDIAN_RECIPES_VECTORIZER = TfidfVectorizer(
+                lowercase=True,
+                token_pattern=r'\b\w+\b',
+                max_features=5000,
+                ngram_range=(1, 2)
+            )
+            ingredient_texts = df['ingredients_clean'].fillna('').tolist()
+            INDIAN_RECIPES_TFIDF = INDIAN_RECIPES_VECTORIZER.fit_transform(ingredient_texts)
+            INDIAN_RECIPES_DATA = df
+            print(f"DEBUG: Loaded {len(df)} sample Indian recipes after error")
+            return df
+        except Exception as e2:
+            print(f"ERROR: Failed to load sample recipes: {str(e2)}")
+            return None
 
 
 def clean_ingredients(ingredients_str: str) -> str:
@@ -220,11 +243,31 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 "recipes": []
             }
         
-        # Vectorize user ingredients
-        user_vector = INDIAN_RECIPES_VECTORIZER.transform([user_ingredients_text])
+        # Check if vectorizer is initialized
+        if INDIAN_RECIPES_VECTORIZER is None or INDIAN_RECIPES_TFIDF is None:
+            print("ERROR: Indian recipes vectorizer not initialized. Reloading...")
+            # Force reload
+            global INDIAN_RECIPES_DATA
+            INDIAN_RECIPES_DATA = None
+            df = load_indian_recipes()
+            if INDIAN_RECIPES_VECTORIZER is None or INDIAN_RECIPES_TFIDF is None:
+                return {
+                    "error": "Failed to initialize Indian recipes ML model",
+                    "recipes": []
+                }
         
-        # Calculate cosine similarity
-        similarities = cosine_similarity(user_vector, INDIAN_RECIPES_TFIDF).flatten()
+        # Vectorize user ingredients
+        try:
+            user_vector = INDIAN_RECIPES_VECTORIZER.transform([user_ingredients_text])
+            
+            # Calculate cosine similarity
+            similarities = cosine_similarity(user_vector, INDIAN_RECIPES_TFIDF).flatten()
+        except Exception as e:
+            print(f"ERROR: Failed to vectorize ingredients: {str(e)}")
+            return {
+                "error": f"Failed to process ingredients: {str(e)}",
+                "recipes": []
+            }
         
         # Get top matching recipes
         top_indices = np.argsort(similarities)[::-1]  # Sort descending
