@@ -87,6 +87,15 @@ export const apiService = {
   getDashboardStats: (userid: string) => api.get(`/user/dashboard-stats/${userid}`),
 
   // NGOs
-  getNGOs: (latitude?: number, longitude?: number, city?: string) => 
-    api.post("/user/ngos", { latitude, longitude, city }),
+  getNGOs: (latitude?: number, longitude?: number, city?: string) => {
+    const payload: any = {}
+    if (latitude !== undefined && longitude !== undefined) {
+      payload.latitude = latitude
+      payload.longitude = longitude
+    }
+    if (city !== undefined) {
+      payload.city = city
+    }
+    return api.post("/user/ngos", payload)
+  },
 }

@@ -38,6 +38,7 @@ export default function Donate() {
   const [error, setError] = useState<string | null>(null)
   const [ngos, setNGOs] = useState<NGO[]>([])
   const [loadingNGOs, setLoadingNGOs] = useState(true)
+  const [selectedCity, setSelectedCity] = useState<string>("")
 
   useEffect(() => {
     fetchEligibleItems()
@@ -47,21 +48,29 @@ export default function Donate() {
   const fetchNGOs = async () => {
     try {
       setLoadingNGOs(true)
+      console.log("Fetching NGOs...")
       
       // Try to get user's location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords
+            console.log(`Location obtained: ${latitude}, ${longitude}`)
             try {
               const response = await apiService.getNGOs(latitude, longitude)
-              if (response.data && response.data.ngos) {
+              console.log("NGO API response:", response.data)
+              if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
+                console.log(`Setting ${response.data.ngos.length} NGOs`)
                 setNGOs(response.data.ngos)
+              } else {
+                console.warn("Invalid NGO response format:", response.data)
+                // Fallback to city-based search
+                await fetchNGOsByCity()
               }
             } catch (error) {
               console.error("Error fetching NGOs by location:", error)
               // Fallback to city-based search
-              fetchNGOsByCity()
+              await fetchNGOsByCity()
             } finally {
               setLoadingNGOs(false)
             }
@@ -69,30 +78,38 @@ export default function Donate() {
           async (error) => {
             console.warn("Geolocation error:", error)
             // Fallback to city-based search
-            fetchNGOsByCity()
+            await fetchNGOsByCity()
           },
-          { timeout: 5000 }
+          { timeout: 5000, enableHighAccuracy: false }
         )
       } else {
+        console.log("Geolocation not supported, using city-based search")
         // Browser doesn't support geolocation, use city-based search
-        fetchNGOsByCity()
+        await fetchNGOsByCity()
       }
     } catch (error) {
       console.error("Error fetching NGOs:", error)
-      setLoadingNGOs(false)
+      await fetchNGOsByCity()
     }
   }
 
-  const fetchNGOsByCity = async () => {
+  const fetchNGOsByCity = async (city: string = "default") => {
     try {
-      // Try to detect city from IP or use default
-      // For now, we'll use a default city or let user specify
-      const response = await apiService.getNGOs(undefined, undefined, "default")
-      if (response.data && response.data.ngos) {
+      console.log(`Fetching NGOs by city: ${city}`)
+      setLoadingNGOs(true)
+      const response = await apiService.getNGOs(undefined, undefined, city)
+      console.log("NGO API response (city):", response.data)
+      if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
+        console.log(`Setting ${response.data.ngos.length} NGOs from city search`)
         setNGOs(response.data.ngos)
+      } else {
+        console.error("Invalid NGO response format:", response.data)
+        // Set empty array if response is invalid
+        setNGOs([])
       }
     } catch (error) {
       console.error("Error fetching NGOs by city:", error)
+      setNGOs([])
     } finally {
       setLoadingNGOs(false)
     }
@@ -307,7 +324,37 @@ export default function Donate() {
 
           {/* NGO Selection */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Select NGO</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Select NGO</h2>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedCity}
+                  onChange={(e) => {
+                    const city = e.target.value
+                    setSelectedCity(city)
+                    if (city) {
+                      fetchNGOsByCity(city)
+                    }
+                  }}
+                  className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Auto-detect</option>
+                  <option value="mumbai">Mumbai</option>
+                  <option value="delhi">Delhi</option>
+                  <option value="bangalore">Bangalore</option>
+                </select>
+                <button
+                  onClick={() => {
+                    setSelectedCity("")
+                    fetchNGOs()
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 px-2 py-1"
+                  title="Refresh NGOs using your location"
+                >
+                  🔄
+                </button>
+              </div>
+            </div>
             {loadingNGOs ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (

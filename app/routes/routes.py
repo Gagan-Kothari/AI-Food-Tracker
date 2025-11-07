@@ -270,16 +270,22 @@ async def get_ngos_route(request: dict):
     longitude = request.get("longitude")
     city = request.get("city")
     
+    print(f"DEBUG: NGO request received - lat: {latitude}, lon: {longitude}, city: {city}")
+    
     if latitude is not None and longitude is not None:
         # Get NGOs by location
+        print(f"DEBUG: Getting NGOs by location ({latitude}, {longitude})")
         ngos = get_ngos_by_location(float(latitude), float(longitude), limit=4)
     elif city:
         # Get NGOs by city name
+        print(f"DEBUG: Getting NGOs by city: {city}")
         ngos = get_ngos_by_city(city, limit=4)
     else:
         # Default: return NGOs for a default location
+        print("DEBUG: Getting NGOs for default location")
         ngos = get_ngos_by_city("default", limit=4)
     
+    print(f"DEBUG: Returning {len(ngos)} NGOs")
     return {"ngos": ngos, "count": len(ngos)}
 
 
