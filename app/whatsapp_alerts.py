@@ -14,7 +14,7 @@ load_dotenv()
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 WHATSAPP_BUSINESS_ACCOUNT_ID = os.getenv("WHATSAPP_BUSINESS_ACCOUNT_ID")  # Optional
-WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v21.0")  # Default to v21.0
+WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v24.0")  # Default to v24.0 (v21.0 is deprecated)
 
 # WhatsApp Cloud API base URL
 WHATSAPP_API_BASE_URL = f"https://graph.facebook.com/{WHATSAPP_API_VERSION}"
@@ -137,6 +137,17 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         if 'x-ad-api-version-warning' in response.headers:
             warning = response.headers.get('x-ad-api-version-warning', '')
             print(f"WARNING: API version warning: {warning}")
+            print(f"WARNING: Consider updating WHATSAPP_API_VERSION environment variable to v24.0")
+        
+        # Check for authentication errors in response
+        if response.status_code == 401:
+            print(f"ERROR: Authentication failed. Access token may be expired or invalid.")
+            print(f"ERROR: Generate a new access token from Meta for Developers and update Railway variables.")
+            return {
+                "status": False,
+                "message": "Authentication failed. Access token may be expired. Please generate a new token.",
+                "error_code": 401
+            }
         
         # Check for rate limiting
         if response.status_code == 429:
@@ -166,13 +177,24 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             
             # Check if the phone number was recognized by WhatsApp
             if not wa_id:
-                print(f"WARNING: WhatsApp did not return a wa_id. This might mean the number is not registered with WhatsApp or not added as a test number.")
+                print(f"ERROR: WhatsApp did not return a wa_id. This means:")
+                print(f"  - The number is NOT registered with WhatsApp")
+                print(f"  - The number is NOT added as a test number in Meta")
+                print(f"  - The phone number format is incorrect")
+                return {
+                    "status": False,
+                    "message": "Phone number not recognized by WhatsApp. Verify the number is added as a test number in Meta.",
+                    "wa_id": None
+                }
             else:
-                print(f"INFO: Message accepted by WhatsApp API. If not received, check:")
-                print(f"  1. WhatsApp spam/archived messages")
+                print(f"INFO: Message accepted by WhatsApp API (Message ID: {message_id})")
+                print(f"INFO: WhatsApp ID (wa_id): {wa_id} - Number is recognized ✅")
+                print(f"INFO: If message not received, check in this order:")
+                print(f"  1. Meta Business Suite: https://business.facebook.com/inbox (check delivery status)")
                 print(f"  2. Access token expiration (temporary tokens expire in 24 hours)")
-                print(f"  3. Meta Business Suite for delivery status")
+                print(f"  3. WhatsApp spam/archived messages on your phone")
                 print(f"  4. Wait 1-2 minutes for delivery (can be delayed)")
+                print(f"  5. Verify test number is correctly added in Meta for Developers")
             
             return {
                 "status": True,
