@@ -128,19 +128,19 @@ export default function Scan() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Scan Item</h1>
-        <p className="text-gray-600">Scan barcodes to add items to your inventory</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Scan Item</h1>
+        <p className="text-gray-600 dark:text-gray-400">Scan barcodes to add items to your inventory</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
         {!showManualForm ? (
           <div className="text-center">
             <div className="mb-6">
-              <CameraIcon className="mx-auto h-24 w-24 text-gray-400" />
+              <CameraIcon className="mx-auto h-24 w-24 text-gray-400 dark:text-gray-600" />
             </div>
             
             <div className="mb-6">
-              <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Expiry Date *
               </label>
               <input
@@ -148,7 +148,7 @@ export default function Scan() {
                 id="expiryDate"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full max-w-md mx-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full max-w-md mx-auto px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 required
               />
             </div>
@@ -156,7 +156,7 @@ export default function Scan() {
             <button
               onClick={startScanning}
               disabled={loading || !expiryDate}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-colors"
             >
               {loading ? "Processing..." : "Scan Barcode & Add to Inventory"}
             </button>
@@ -164,7 +164,9 @@ export default function Scan() {
             {message && (
               <div
                 className={`mt-4 p-4 rounded-lg ${
-                  message.includes("success") ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                  message.includes("success") 
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" 
+                    : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
                 }`}
               >
                 {message}
@@ -174,7 +176,7 @@ export default function Scan() {
             {!loading && message.includes("success") && (
               <button
                 onClick={resetForm}
-                className="mt-4 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="mt-4 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Scan Another Item
               </button>
@@ -182,56 +184,56 @@ export default function Scan() {
           </div>
         ) : (
           <div>
-            <h2 className="text-xl font-semibold mb-4">Manual Entry</h2>
-            <p className="text-sm text-gray-600 mb-2">Barcode: {scannedBarcode}</p>
-            <p className="text-sm font-medium text-green-700 mb-4">💡 Help us Expand our Database!</p>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Manual Entry</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Barcode: {scannedBarcode}</p>
+            <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-4">💡 Help us Expand our Database!</p>
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Food Name *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Food Name *</label>
                 <input
                   type="text"
                   value={manualForm.f_name}
                   onChange={(e) => setManualForm({ ...manualForm, f_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand *</label>
                 <input
                   type="text"
                   value={manualForm.brands}
                   onChange={(e) => setManualForm({ ...manualForm, brands: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity *</label>
                 <input
                   type="text"
                   value={manualForm.quantity}
                   onChange={(e) => setManualForm({ ...manualForm, quantity: e.target.value })}
                   placeholder="e.g., 100g, 250ml"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Energy (kcal/100g) - Optional</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Energy (kcal/100g) - Optional</label>
                 <input
                   type="number"
                   value={manualForm.energy}
                   onChange={(e) => setManualForm({ ...manualForm, energy: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
                 <select
                   value={manualForm.category}
                   onChange={(e) => setManualForm({ ...manualForm, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
                   <option value="">Select a category</option>
@@ -246,14 +248,14 @@ export default function Scan() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                   {loading ? "Adding..." : "Add Item"}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -262,7 +264,9 @@ export default function Scan() {
             {message && (
               <div
                 className={`mt-4 p-4 rounded-lg ${
-                  message.includes("success") ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                  message.includes("success") 
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" 
+                    : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
                 }`}
               >
                 {message}

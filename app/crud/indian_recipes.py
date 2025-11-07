@@ -1,12 +1,13 @@
 """
 Indian Recipe Matching using ML model (TF-IDF + Cosine Similarity)
-Loads recipes from Kaggle Indian Food Dataset and matches based on ingredients
+Loads pre-trained model or trains on-the-fly if model not found
 """
 import os
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import joblib
 import re
 from typing import List, Dict, Any
 from dotenv import load_dotenv
@@ -15,6 +16,13 @@ load_dotenv()
 
 # Path to Indian recipes dataset (CSV file)
 INDIAN_RECIPES_CSV = os.getenv("INDIAN_RECIPES_CSV", "indian_food.csv")
+
+# Pre-trained model paths
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models", "indian_recipes")
+VECTORIZER_FILE = os.path.join(MODEL_DIR, "indian_recipes_vectorizer.joblib")
+TFIDF_MATRIX_FILE = os.path.join(MODEL_DIR, "indian_recipes_tfidf.joblib")
+RECIPES_DATA_FILE = os.path.join(MODEL_DIR, "indian_recipes_data.parquet")
+
 INDIAN_RECIPES_DATA = None
 INDIAN_RECIPES_VECTORIZER = None
 INDIAN_RECIPES_TFIDF = None
@@ -22,8 +30,8 @@ INDIAN_RECIPES_TFIDF = None
 
 def load_indian_recipes():
     """
-    Load Indian recipes dataset from CSV file.
-    Expected CSV columns: name, ingredients, instructions, prep_time, cook_time, etc.
+    Load Indian recipes - first tries to load pre-trained model, 
+    otherwise trains on-the-fly from CSV or sample data.
     """
     global INDIAN_RECIPES_DATA, INDIAN_RECIPES_VECTORIZER, INDIAN_RECIPES_TFIDF
     
@@ -31,7 +39,27 @@ def load_indian_recipes():
         return INDIAN_RECIPES_DATA
     
     try:
-        # Try to load from app directory first
+        # Try to load pre-trained model first
+        if (os.path.exists(VECTORIZER_FILE) and 
+            os.path.exists(TFIDF_MATRIX_FILE) and 
+            os.path.exists(RECIPES_DATA_FILE)):
+            
+            print(f"DEBUG: Loading pre-trained Indian recipes model from {MODEL_DIR}")
+            
+            INDIAN_RECIPES_VECTORIZER = joblib.load(VECTORIZER_FILE)
+            INDIAN_RECIPES_TFIDF = joblib.load(TFIDF_MATRIX_FILE)
+            INDIAN_RECIPES_DATA = pd.read_parquet(RECIPES_DATA_FILE)
+            
+            print(f"DEBUG: Loaded {len(INDIAN_RECIPES_DATA)} Indian recipes from pre-trained model")
+            print(f"DEBUG: Vectorizer vocabulary size: {len(INDIAN_RECIPES_VECTORIZER.vocabulary_)}")
+            print(f"DEBUG: TF-IDF matrix shape: {INDIAN_RECIPES_TFIDF.shape}")
+            
+            return INDIAN_RECIPES_DATA
+        
+        # Fallback: Train model on-the-fly (for backward compatibility)
+        print(f"DEBUG: Pre-trained model not found. Training on-the-fly...")
+        
+        # Try to load from CSV
         csv_paths = [
             os.path.join(os.path.dirname(__file__), "..", "..", INDIAN_RECIPES_CSV),
             os.path.join(os.path.dirname(__file__), "..", INDIAN_RECIPES_CSV),
@@ -47,17 +75,15 @@ def load_indian_recipes():
         
         if df is None:
             print(f"WARNING: Indian recipes CSV not found. Creating sample dataset.")
-            # Create a sample dataset if CSV is not found
             df = create_sample_indian_recipes()
         
-        # Normalize column names (handle different possible column names)
+        # Normalize column names
         df.columns = df.columns.str.lower().str.strip()
         
         # Ensure required columns exist
         required_cols = ['name', 'ingredients']
         for col in required_cols:
             if col not in df.columns:
-                # Try alternative column names
                 if col == 'name':
                     alternatives = ['recipe', 'dish', 'dish_name', 'recipe_name', 'title']
                 elif col == 'ingredients':
@@ -68,29 +94,26 @@ def load_indian_recipes():
                         df[col] = df[alt]
                         break
                 else:
-                    # If still not found, create a placeholder
                     df[col] = ""
         
         # Clean and preprocess ingredients
         df['ingredients_clean'] = df['ingredients'].apply(clean_ingredients)
         
-        # Create TF-IDF vectorizer for ingredient matching
-        global INDIAN_RECIPES_VECTORIZER, INDIAN_RECIPES_TFIDF
+        # Create and train TF-IDF vectorizer
         INDIAN_RECIPES_VECTORIZER = TfidfVectorizer(
             lowercase=True,
             token_pattern=r'\b\w+\b',
             max_features=5000,
-            ngram_range=(1, 2)  # Include unigrams and bigrams
+            ngram_range=(1, 2)
         )
         
-        # Fit vectorizer on all recipe ingredients
         ingredient_texts = df['ingredients_clean'].fillna('').tolist()
         INDIAN_RECIPES_TFIDF = INDIAN_RECIPES_VECTORIZER.fit_transform(ingredient_texts)
         
         INDIAN_RECIPES_DATA = df
-        print(f"DEBUG: Loaded {len(df)} Indian recipes")
-        print(f"DEBUG: Vectorizer initialized: {INDIAN_RECIPES_VECTORIZER is not None}")
-        print(f"DEBUG: TF-IDF matrix shape: {INDIAN_RECIPES_TFIDF.shape if INDIAN_RECIPES_TFIDF is not None else 'None'}")
+        print(f"DEBUG: Trained model on {len(df)} Indian recipes")
+        print(f"DEBUG: Vectorizer vocabulary size: {len(INDIAN_RECIPES_VECTORIZER.vocabulary_)}")
+        print(f"DEBUG: TF-IDF matrix shape: {INDIAN_RECIPES_TFIDF.shape}")
         
         return df
         
@@ -98,11 +121,9 @@ def load_indian_recipes():
         print(f"ERROR: Failed to load Indian recipes: {str(e)}")
         import traceback
         traceback.print_exc()
-        # Return sample dataset on error and try to initialize it
+        # Return sample dataset on error
         try:
             df = create_sample_indian_recipes()
-            # Initialize vectorizer for sample data
-            global INDIAN_RECIPES_VECTORIZER, INDIAN_RECIPES_TFIDF
             df['ingredients_clean'] = df['ingredients'].apply(clean_ingredients)
             INDIAN_RECIPES_VECTORIZER = TfidfVectorizer(
                 lowercase=True,
