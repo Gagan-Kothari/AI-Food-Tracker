@@ -38,3 +38,31 @@ coverage/
 alembic/**/__pycache__/
 .DS_Store
 Thumbs.db
+
+# Test files
+**/test_*.py
+**/check_*.py
+**/*test*.py
+**/test.py
+
+# Backup files
+**/*.backup.*
+**/*backup*
+**/alembic_backup/
+Procfile.backup
+
+# Old/unused scripts
+start.py
+create_db.py
+fix_*.py
+setup_*.py
+start_server.*
+app.zip
+
+# Old frontend code
+app/src/
+
+# Temporary files
+*.zip
+*.tmp
+1.21

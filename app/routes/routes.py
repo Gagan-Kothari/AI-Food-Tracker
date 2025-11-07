@@ -131,8 +131,17 @@ async def get_recipe_suggestions(ingredients: Ingredients):
     return get_recipes(ingredients.ingredients)
 
 @router.post("/user/recipe/inventory-based")
-async def get_inventory_based_recipe_suggestions(request: UserIdRequest, db: Session = Depends(get_db)):
-    return get_inventory_based_recipes(request.userid, db)
+async def get_inventory_based_recipe_suggestions(request: dict, db: Session = Depends(get_db)):
+    """
+    Get recipe suggestions based on user inventory.
+    
+    Request body:
+    - userid: User ID
+    - recipe_type: "indian", "foreign", or "both" (default: "foreign")
+    """
+    user_id = int(request.get("userid"))
+    recipe_type = request.get("recipe_type", "foreign")
+    return get_inventory_based_recipes(user_id, db, recipe_type=recipe_type)
  
 
 @router.post("/user/expiry_alerts")

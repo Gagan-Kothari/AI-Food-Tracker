@@ -1,9 +1,7 @@
 from sqlalchemy import create_engine # type: ignore
-from sqlalchemy.engine.url import make_url # type: ignore
 from sqlalchemy.orm import sessionmaker, Session, declarative_base# type: ignore
 from dotenv import load_dotenv  # type: ignore
 import os
-import logging
 
 # Load .env file first
 load_dotenv()
@@ -23,13 +21,7 @@ else:
 
 engine = create_engine(DATABASE_URL) # type: ignore
 
-# Safe log of the resolved database target (without credentials)
-try:
-    url = make_url(DATABASE_URL)
-    masked = url.render_as_string(hide_password=True)
-    logging.getLogger("uvicorn").info(f"Using database: {masked}")
-except Exception:
-    pass
+# Database connection established (credentials hidden for security)
 Sessionlocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 

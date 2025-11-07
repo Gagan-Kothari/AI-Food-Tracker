@@ -1,5 +1,5 @@
 """
-Recipe suggestions using Spoonacular API based on user inventory
+Recipe suggestions using Spoonacular API and Indian recipes ML model based on user inventory
 """
 import requests
 from dotenv import load_dotenv
@@ -9,6 +9,7 @@ from app.models import models
 from datetime import datetime, timedelta
 from app.crud.inventory_crud import user_inventory
 from app.whatsapp_alerts import send_whatsapp_message
+from app.crud.indian_recipes import get_indian_recipes
 import re
 
 load_dotenv()
@@ -83,7 +84,7 @@ def get_recipes(ingredients, number=10):
         return {"error": f"Unexpected error: {str(e)}"}
 
 
-def get_inventory_based_recipes(user_id: int, db: Session):
+def get_inventory_based_recipes(user_id: int, db: Session, recipe_type: str = "foreign"):
     """
     Get recipe suggestions based on user's inventory with proper prioritization.
     
@@ -95,6 +96,7 @@ def get_inventory_based_recipes(user_id: int, db: Session):
     Args:
         user_id: User ID to fetch inventory for
         db: Database session
+        recipe_type: Type of recipes to fetch - "indian", "foreign", or "both" (default: "foreign")
         
     Returns:
         dict: Recipe suggestions with success/error status
@@ -220,24 +222,56 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         print(f"DEBUG: Found {len(expiry_alert_items)} items with expiry alerts (yellow/red)")
         print(f"DEBUG: Extracted {len(expiry_ingredients)} ingredients from expiry alert items")
         
-        # Make two separate API calls
+        # Normalize recipe_type
+        recipe_type = recipe_type.lower() if recipe_type else "foreign"
+        if recipe_type not in ["indian", "foreign", "both"]:
+            recipe_type = "foreign"
+        
+        print(f"DEBUG: Fetching {recipe_type} recipes")
+        
+        # Helper function to get recipes based on type
+        def get_recipes_by_type(ing_list, num, expiry_list=None):
+            if recipe_type == "indian":
+                return get_indian_recipes(ing_list, number=num, expiry_ingredients=expiry_list)
+            elif recipe_type == "foreign":
+                return get_recipes(ing_list, number=num)
+            else:  # both
+                # Get both types
+                indian_result = get_indian_recipes(ing_list, number=num, expiry_ingredients=expiry_list)
+                foreign_result = get_recipes(ing_list, number=num)
+                
+                indian_recs = indian_result.get("recipes", []) if not indian_result.get("error") else []
+                foreign_recs = foreign_result.get("recipes", []) if not foreign_result.get("error") else []
+                
+                # Combine and return
+                return {
+                    "recipes": indian_recs + foreign_recs,
+                    "error": None if (indian_recs or foreign_recs) else "No recipes found"
+                }
+        
+        # Make two separate calls
         # 1. Get recipes for expiry alert items (5 recipes, shown first)
         expiry_recipes = []
         if expiry_ingredients:
-            expiry_recipe_result = get_recipes(expiry_ingredients, number=5)
+            expiry_recipe_result = get_recipes_by_type(expiry_ingredients, num=5, expiry_list=expiry_ingredients)
             if not expiry_recipe_result.get("error"):
                 expiry_recipes = expiry_recipe_result.get("recipes", [])
                 print(f"DEBUG: Got {len(expiry_recipes)} recipes for expiry alert items")
         
         # 2. Get recipes for entire inventory (5 recipes, shown after)
-        all_recipe_result = get_recipes(ingredients, number=5)
+        all_recipe_result = get_recipes_by_type(ingredients, num=5)
         
         if all_recipe_result.get("error"):
             # If main call fails but expiry call succeeded, still return expiry recipes
             if expiry_recipes:
                 recipes = expiry_recipes
             else:
-                return all_recipe_result
+                return {
+                    "success": False,
+                    "error": all_recipe_result.get("error", "Failed to fetch recipes"),
+                    "recipes": [],
+                    "ingredients_used": ingredients
+                }
         else:
             all_recipes = all_recipe_result.get("recipes", [])
             # Combine: expiry recipes first, then all recipes
@@ -261,6 +295,11 @@ def get_inventory_based_recipes(user_id: int, db: Session):
             
             recipes = combined_recipes
             print(f"DEBUG: Combined {len(expiry_recipes)} expiry recipes + {len(all_recipes)} all recipes = {len(recipes)} total")
+            
+            # Limit to 10 recipes total
+            if len(recipes) > 10:
+                recipes = recipes[:10]
+                print(f"DEBUG: Limited to top 10 recipes")
         
         if not recipes:
             return {

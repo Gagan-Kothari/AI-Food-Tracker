@@ -37,10 +37,11 @@ export default function Recipes() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
+  const [recipeType, setRecipeType] = useState<"indian" | "foreign" | "both">("foreign")
 
   useEffect(() => {
     fetchInventoryAndRecipes()
-  }, [user])
+  }, [user, recipeType])
 
   const fetchInventoryAndRecipes = async () => {
     if (!user?.userid) return
@@ -50,8 +51,8 @@ export default function Recipes() {
       setError(null)
 
       // Get inventory-based recipe suggestions
-      console.log("Fetching inventory-based recipes for user:", user.userid)
-      const recipeResponse = await apiService.getInventoryBasedRecipes(user.userid)
+      console.log("Fetching inventory-based recipes for user:", user.userid, "type:", recipeType)
+      const recipeResponse = await apiService.getInventoryBasedRecipes(user.userid, recipeType)
       console.log("Inventory-based recipe API response:", recipeResponse.data)
       
       if (recipeResponse.data.success && recipeResponse.data.recipes) {
@@ -177,6 +178,40 @@ export default function Recipes() {
         <p className="text-gray-600 dark:text-gray-400">
           AI-powered recipes based on your current inventory ({inventoryCount} items)
         </p>
+      </div>
+
+      {/* Recipe Type Buttons */}
+      <div className="mb-6 flex flex-wrap gap-3 justify-center sm:justify-start">
+        <button
+          onClick={() => setRecipeType("indian")}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            recipeType === "indian"
+              ? "bg-green-600 dark:bg-green-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+        >
+          Indian Recipes
+        </button>
+        <button
+          onClick={() => setRecipeType("foreign")}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            recipeType === "foreign"
+              ? "bg-green-600 dark:bg-green-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+        >
+          Foreign Recipes
+        </button>
+        <button
+          onClick={() => setRecipeType("both")}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            recipeType === "both"
+              ? "bg-green-600 dark:bg-green-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+          }`}
+        >
+          Both
+        </button>
       </div>
 
       {recipes.length === 0 ? (
