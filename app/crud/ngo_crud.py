@@ -180,6 +180,167 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 
+def get_ngos_from_nominatim(latitude: float, longitude: float, limit: int = 4) -> Optional[List[Dict]]:
+    """
+    Get NGOs from OpenStreetMap/Nominatim (FREE, no API key required).
+    Uses both Overpass API and Nominatim search.
+    
+    Args:
+        latitude: User's latitude
+        longitude: User's longitude
+        limit: Maximum number of NGOs to return (default: 4)
+        
+    Returns:
+        List of NGO dictionaries or None if API call fails
+    """
+    ngos = []
+    
+    try:
+        # Method 1: Use Nominatim search API (free, no API key)
+        # Search for NGOs, food banks, charities near the location
+        nominatim_url = "https://nominatim.openstreetmap.org/search"
+        
+        search_terms = [
+            "food bank",
+            "NGO",
+            "charity",
+            "shelter",
+            "community kitchen"
+        ]
+        
+        for term in search_terms:
+            if len(ngos) >= limit * 2:
+                break
+                
+            try:
+                params = {
+                    "q": term,
+                    "format": "json",
+                    "limit": 10,
+                    "addressdetails": 1,
+                    "extratags": 1,
+                    "namedetails": 1,
+                    "bounded": 1,
+                    "viewbox": f"{longitude-1.8},{latitude+1.8},{longitude+1.8},{latitude-1.8}",  # ~200km box
+                    "user-agent": "FoodTrackerApp/1.0"  # Required by Nominatim
+                }
+                
+                response = requests.get(nominatim_url, params=params, timeout=15, headers={
+                    "User-Agent": "FoodTrackerApp/1.0"
+                })
+                
+                if response.status_code == 200:
+                    results = response.json()
+                    for place in results:
+                        if len(ngos) >= limit * 2:
+                            break
+                            
+                        place_lat = float(place.get('lat', latitude))
+                        place_lon = float(place.get('lon', longitude))
+                        distance = calculate_distance(latitude, longitude, place_lat, place_lon)
+                        
+                        # Only include if within 200km
+                        if distance <= 200:
+                            name = place.get('display_name', '').split(',')[0] or place.get('name', 'Unknown NGO')
+                            address = place.get('display_name', 'Address not available')
+                            contact = place.get('extratags', {}).get('phone') or place.get('extratags', {}).get('contact:phone', 'Contact not available')
+                            
+                            # Skip if we already have this place
+                            if any(abs(n['latitude'] - place_lat) < 0.001 and abs(n['longitude'] - place_lon) < 0.001 for n in ngos):
+                                continue
+                            
+                            ngo = {
+                                "id": place.get('place_id', len(ngos) + 1),
+                                "name": name,
+                                "address": address,
+                                "contact": contact,
+                                "description": f"Community service organization. Helping the community with food donations.",
+                                "latitude": place_lat,
+                                "longitude": place_lon,
+                                "distance_km": round(distance, 2),
+                                "rating": None,
+                                "place_id": str(place.get('place_id', ''))
+                            }
+                            ngos.append(ngo)
+                            
+                # Be respectful - Nominatim has rate limits
+                import time
+                time.sleep(1)  # 1 second delay between requests
+                
+            except Exception as e:
+                print(f"DEBUG: Error in Nominatim search for '{term}': {str(e)}")
+                continue
+        
+        # Method 2: Use Overpass API for more structured data
+        if len(ngos) < limit:
+            try:
+                overpass_url = "http://overpass-api.de/api/interpreter"
+                query = f'[out:json][timeout:25];(node["amenity"="food_bank"](around:200000,{latitude},{longitude});node["amenity"="shelter"](around:200000,{latitude},{longitude});node["amenity"="community_centre"](around:200000,{latitude},{longitude});way["amenity"="food_bank"](around:200000,{latitude},{longitude});way["amenity"="shelter"](around:200000,{latitude},{longitude});way["amenity"="community_centre"](around:200000,{latitude},{longitude}););out center meta;'
+                
+                response = requests.get(overpass_url, params={'data': query}, timeout=30)
+                if response.status_code == 200:
+                    data = response.json()
+                    elements = data.get('elements', [])
+                    
+                    for element in elements:
+                        if len(ngos) >= limit * 2:
+                            break
+                            
+                        # Get coordinates
+                        if 'lat' in element and 'lon' in element:
+                            place_lat = element['lat']
+                            place_lon = element['lon']
+                        elif 'center' in element:
+                            place_lat = element['center']['lat']
+                            place_lon = element['center']['lon']
+                        else:
+                            continue
+                        
+                        distance = calculate_distance(latitude, longitude, place_lat, place_lon)
+                        
+                        # Only include if within 200km
+                        if distance <= 200:
+                            name = element.get('tags', {}).get('name', 'Unknown NGO')
+                            address = element.get('tags', {}).get('addr:full') or \
+                                     f"{element.get('tags', {}).get('addr:street', '')}, {element.get('tags', {}).get('addr:city', '')}"
+                            contact = element.get('tags', {}).get('phone') or element.get('tags', {}).get('contact:phone', 'Contact not available')
+                            
+                            # Skip duplicates
+                            if any(abs(n['latitude'] - place_lat) < 0.001 and abs(n['longitude'] - place_lon) < 0.001 for n in ngos):
+                                continue
+                            
+                            ngo = {
+                                "id": element.get('id', len(ngos) + 1),
+                                "name": name,
+                                "address": address or "Address not available",
+                                "contact": contact,
+                                "description": f"Community service organization. {element.get('tags', {}).get('description', 'Helping the community with food donations.')}",
+                                "latitude": place_lat,
+                                "longitude": place_lon,
+                                "distance_km": round(distance, 2),
+                                "rating": None,
+                                "place_id": str(element.get('id', ''))
+                            }
+                            ngos.append(ngo)
+            except Exception as e:
+                print(f"DEBUG: Error in Overpass query: {str(e)}")
+        
+        if ngos:
+            # Sort by distance and return top N
+            ngos.sort(key=lambda x: x["distance_km"])
+            print(f"DEBUG: Found {len(ngos)} NGOs from OpenStreetMap (within 200km)")
+            return ngos[:limit]
+        else:
+            print("DEBUG: No NGOs found in OpenStreetMap")
+            return None
+            
+    except Exception as e:
+        print(f"DEBUG: Error calling OpenStreetMap API: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def get_ngos_from_google_maps(latitude: float, longitude: float, limit: int = 4) -> Optional[List[Dict]]:
     """
     Get NGOs from Google Maps Places API near a given location.
@@ -556,30 +717,82 @@ def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> L
     Returns:
         List of NGO dictionaries sorted by distance
     """
-    # Try Google Maps API first
-    print(f"DEBUG: Attempting Google Maps API search for ({latitude}, {longitude})")
-    google_ngos = get_ngos_from_google_maps(latitude, longitude, limit)
-    if google_ngos and len(google_ngos) > 0:
-        print(f"DEBUG: Found {len(google_ngos)} NGOs from Google Maps")
-        return google_ngos
+    # Check if Google Maps API key is configured
+    if not GOOGLE_MAPS_API_KEY:
+        print("DEBUG: ⚠️ Google Maps API key NOT configured!")
+        print("DEBUG: To enable Google Maps search, add GOOGLE_MAPS_API_KEY to your environment variables")
+        print("DEBUG: Falling back to city-based detection...")
+    else:
+        print(f"DEBUG: ✅ Google Maps API key found (first 10 chars: {GOOGLE_MAPS_API_KEY[:10]}...)")
+    
+    # Try OpenStreetMap/Nominatim first (FREE, no API key needed)
+    print(f"DEBUG: Attempting OpenStreetMap search for ({latitude}, {longitude})")
+    osm_ngos = get_ngos_from_nominatim(latitude, longitude, limit)
+    if osm_ngos and len(osm_ngos) > 0:
+        print(f"DEBUG: ✅ Found {len(osm_ngos)} NGOs from OpenStreetMap")
+        return osm_ngos
+    else:
+        print("DEBUG: ❌ No NGOs found via OpenStreetMap")
+    
+    # Try Google Maps API (only if key is configured and OSM didn't find results)
+    if GOOGLE_MAPS_API_KEY:
+        print(f"DEBUG: Attempting Google Maps API search for ({latitude}, {longitude})")
+        google_ngos = get_ngos_from_google_maps(latitude, longitude, limit)
+        if google_ngos and len(google_ngos) > 0:
+            print(f"DEBUG: ✅ Found {len(google_ngos)} NGOs from Google Maps")
+            return google_ngos
+        else:
+            print("DEBUG: ❌ No NGOs found via Google Maps API search")
+    else:
+        print("DEBUG: ⏭️ Skipping Google Maps API search (no API key)")
     
     # If no results from Google Maps, detect nearest major city and search there
-    print("DEBUG: No NGOs found via Google Maps, detecting nearest major city")
+    print("DEBUG: Detecting nearest major city...")
     nearest_city = detect_nearest_major_city(latitude, longitude)
     
-    # Try Google Maps Text Search for the nearest city
+    # Try Nominatim search for the nearest city (FREE, no API key needed)
+    if nearest_city != "default":
+        print(f"DEBUG: Searching for NGOs in {nearest_city} using Nominatim (free)")
+        city_ngos = search_ngos_in_city_nominatim(nearest_city, latitude, longitude, limit)
+        if city_ngos and len(city_ngos) > 0:
+            print(f"DEBUG: ✅ Found {len(city_ngos)} NGOs in {nearest_city} via Nominatim")
+            return city_ngos
+        else:
+            print(f"DEBUG: ❌ No NGOs found in {nearest_city} via Nominatim")
+    
+    # Try Google Maps Text Search for the nearest city (only if key is configured and Nominatim failed)
     if nearest_city != "default" and GOOGLE_MAPS_API_KEY:
-        print(f"DEBUG: Searching for NGOs in {nearest_city} using Google Maps")
+        print(f"DEBUG: Searching for NGOs in {nearest_city} using Google Maps Text Search")
         city_ngos = search_ngos_in_city_google_maps(nearest_city, latitude, longitude, limit)
         if city_ngos and len(city_ngos) > 0:
-            print(f"DEBUG: Found {len(city_ngos)} NGOs in {nearest_city} via Google Maps")
+            print(f"DEBUG: ✅ Found {len(city_ngos)} NGOs in {nearest_city} via Google Maps")
             return city_ngos
+        else:
+            print(f"DEBUG: ❌ No NGOs found in {nearest_city} via Google Maps")
     
     # Fallback to static database for the nearest city
-    print(f"DEBUG: Using fallback static NGO database for {nearest_city}")
+    print(f"DEBUG: ⚠️ Using fallback static NGO database for {nearest_city}")
+    print(f"DEBUG: Note: Static database has limited cities. For real NGOs, configure GOOGLE_MAPS_API_KEY")
+    print(f"DEBUG: Available cities in static DB: {list(MOCK_NGO_DATABASE.keys())}")
     
     # Get NGOs for the city (or default)
-    ngos = MOCK_NGO_DATABASE.get(nearest_city, MOCK_NGO_DATABASE["default"])
+    # Map detected city to available static cities if needed
+    city_mapping = {
+        "chennai": "mumbai",  # Use Mumbai as fallback for Chennai
+        "bengaluru": "bangalore",  # Map bengaluru to bangalore
+        "trichy": "bangalore",
+        "coimbatore": "bangalore",
+        "madurai": "bangalore",
+    }
+    
+    # Use mapped city if available, otherwise use detected city, otherwise default
+    static_city = city_mapping.get(nearest_city, nearest_city)
+    if static_city not in MOCK_NGO_DATABASE:
+        static_city = "default"
+        print(f"DEBUG: City '{nearest_city}' not in static DB, using 'default'")
+    
+    ngos = MOCK_NGO_DATABASE.get(static_city, MOCK_NGO_DATABASE["default"])
+    print(f"DEBUG: Using static city: {static_city}, found {len(ngos)} NGOs")
     
     # Calculate distance for each NGO and sort by distance
     ngos_with_distance = []
@@ -594,6 +807,108 @@ def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> L
     
     # Return top N NGOs
     return ngos_with_distance[:limit]
+
+
+def search_ngos_in_city_nominatim(city_name: str, user_lat: float, user_lon: float, limit: int = 4) -> Optional[List[Dict]]:
+    """
+    Search for NGOs in a specific city using Nominatim (FREE, no API key).
+    
+    Args:
+        city_name: Name of the city to search in
+        user_lat: User's latitude (for distance calculation)
+        user_lon: User's longitude (for distance calculation)
+        limit: Maximum number of NGOs to return
+        
+    Returns:
+        List of NGO dictionaries or None if API call fails
+    """
+    try:
+        # Capitalize city name for search
+        city_display = city_name.capitalize()
+        
+        # Search queries for the city
+        search_queries = [
+            f"NGO {city_display}",
+            f"food bank {city_display}",
+            f"charity {city_display}",
+            f"food donation {city_display}",
+            f"non-profit {city_display}"
+        ]
+        
+        nominatim_url = "https://nominatim.openstreetmap.org/search"
+        ngos = []
+        
+        for query in search_queries:
+            if len(ngos) >= limit * 2:
+                break
+                
+            try:
+                params = {
+                    "q": query,
+                    "format": "json",
+                    "limit": 10,
+                    "addressdetails": 1,
+                    "extratags": 1,
+                    "user-agent": "FoodTrackerApp/1.0"
+                }
+                
+                response = requests.get(nominatim_url, params=params, timeout=15, headers={
+                    "User-Agent": "FoodTrackerApp/1.0"
+                })
+                
+                if response.status_code == 200:
+                    results = response.json()
+                    for place in results:
+                        if len(ngos) >= limit * 2:
+                            break
+                            
+                        place_lat = float(place.get('lat', user_lat))
+                        place_lon = float(place.get('lon', user_lon))
+                        distance = calculate_distance(user_lat, user_lon, place_lat, place_lon)
+                        
+                        # Include NGOs within reasonable distance (up to 200km from user)
+                        if distance <= 200:
+                            name = place.get('display_name', '').split(',')[0] or place.get('name', 'Unknown NGO')
+                            address = place.get('display_name', 'Address not available')
+                            contact = place.get('extratags', {}).get('phone') or place.get('extratags', {}).get('contact:phone', 'Contact not available')
+                            
+                            # Skip duplicates
+                            if any(abs(n['latitude'] - place_lat) < 0.001 and abs(n['longitude'] - place_lon) < 0.001 for n in ngos):
+                                continue
+                            
+                            ngo = {
+                                "id": place.get('place_id', len(ngos) + 1),
+                                "name": name,
+                                "address": address,
+                                "contact": contact,
+                                "description": f"Located in {city_display}. Helping the community with food donations.",
+                                "latitude": place_lat,
+                                "longitude": place_lon,
+                                "distance_km": round(distance, 2),
+                                "rating": None,
+                                "place_id": str(place.get('place_id', ''))
+                            }
+                            ngos.append(ngo)
+                
+                # Be respectful - Nominatim has rate limits
+                import time
+                time.sleep(1)  # 1 second delay between requests
+                
+            except Exception as e:
+                print(f"DEBUG: Error in Nominatim city search for '{query}': {str(e)}")
+                continue
+        
+        if ngos:
+            # Sort by distance and return top N
+            ngos.sort(key=lambda x: x["distance_km"])
+            print(f"DEBUG: Returning {min(len(ngos), limit)} NGOs from {city_display} via Nominatim (found {len(ngos)} total)")
+            return ngos[:limit]
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"DEBUG: Error searching NGOs in city via Nominatim: {str(e)}")
+        return None
 
 
 def search_ngos_in_city_google_maps(city_name: str, user_lat: float, user_lon: float, limit: int = 4) -> Optional[List[Dict]]:
