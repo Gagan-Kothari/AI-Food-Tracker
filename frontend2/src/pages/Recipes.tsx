@@ -58,32 +58,42 @@ export default function Recipes() {
       
       if (recipeResponse.data.success && recipeResponse.data.recipes) {
         // Transform API response to match our interface
-        const transformedRecipes: Recipe[] = recipeResponse.data.recipes.map((recipe: any) => ({
-          id: recipe.id,
-          title: recipe.title,
-          image: recipe.image || "/placeholder.svg",
-          usedIngredientCount: recipe.usedIngredientCount || 0,
-          missedIngredientCount: recipe.missedIngredientCount || 0,
-          priorityScore: recipe.priority_score || 0,
-          usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
-            id: ing.id,
-            name: ing.name,
-            image: ing.image || "/placeholder.svg",
-            inventoryId: ing.inventory_id,
-            expiryDate: ing.expiry_date,
-            quantity: ing.quantity,
-            unit: ing.unit || "item",
-            category: ing.category,
-            daysUntilExpiry: ing.days_until_expiry,
-            available: ing.available !== false  // Default to true if not specified
-          })) || [],
-          missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
-            id: ing.id,
-            name: ing.name,
-            image: ing.image || "/placeholder.svg",
-            available: false
-          })) || []
-        }))
+        const transformedRecipes: Recipe[] = recipeResponse.data.recipes.map((recipe: any) => {
+          // Debug: Log image URLs for Indian recipes
+          if (recipe.source === "indian" || recipeType === "indian" || recipeType === "both") {
+            console.log(`Recipe: ${recipe.title}`)
+            console.log(`  Image URL: ${recipe.image}`)
+            console.log(`  Image length: ${recipe.image?.length || 0}`)
+            console.log(`  Image valid: ${recipe.image && recipe.image.startsWith('http')}`)
+          }
+          
+          return {
+            id: recipe.id,
+            title: recipe.title,
+            image: recipe.image || "/placeholder.svg",  // Use image from API, fallback to placeholder
+            usedIngredientCount: recipe.usedIngredientCount || 0,
+            missedIngredientCount: recipe.missedIngredientCount || 0,
+            priorityScore: recipe.priority_score || 0,
+            usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
+              id: ing.id,
+              name: ing.name,
+              image: ing.image || "/placeholder.svg",
+              inventoryId: ing.inventory_id,
+              expiryDate: ing.expiry_date,
+              quantity: ing.quantity,
+              unit: ing.unit || "item",
+              category: ing.category,
+              daysUntilExpiry: ing.days_until_expiry,
+              available: ing.available !== false  // Default to true if not specified
+            })) || [],
+            missedIngredients: recipe.missedIngredients?.map((ing: any) => ({
+              id: ing.id,
+              name: ing.name,
+              image: ing.image || "/placeholder.svg",
+              available: false
+            })) || []
+          }
+        })
 
         // Sort by priority score (highest first)
         transformedRecipes.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0))
@@ -228,7 +238,19 @@ export default function Recipes() {
               key={recipe.id}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col h-full"
             >
-              <img src={recipe.image || "/placeholder.svg"} alt={recipe.title} className="w-full h-48 object-cover flex-shrink-0" />
+              <img 
+                src={recipe.image || "/placeholder.svg"} 
+                alt={recipe.title} 
+                className="w-full h-48 object-cover flex-shrink-0" 
+                onError={(e) => {
+                  console.error(`Failed to load image for ${recipe.title}:`, recipe.image)
+                  // Fallback to placeholder on error
+                  e.currentTarget.src = "/placeholder.svg"
+                }}
+                onLoad={() => {
+                  console.log(`Successfully loaded image for ${recipe.title}:`, recipe.image)
+                }}
+              />
               <div className="p-6 flex flex-col flex-1">
                 <div className="flex items-start justify-between mb-2 min-h-[3rem]">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 pr-2">{recipe.title}</h3>

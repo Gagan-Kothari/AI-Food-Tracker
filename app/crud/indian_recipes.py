@@ -724,12 +724,13 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
             root_dir = os.path.dirname(app_dir)  # root/ (parent of app/)
             
             # Build comprehensive list of possible paths
+            # Priority: Check app/ directory first (Railway deployment location)
             csv_paths = [
-                os.path.join(root_dir, INDIAN_RECIPES_CSV),  # root/indian_food.csv (project root)
-                os.path.join(app_dir, INDIAN_RECIPES_CSV),  # app/indian_food.csv
+                os.path.join(app_dir, INDIAN_RECIPES_CSV),  # app/indian_food.csv (Railway - HIGHEST PRIORITY)
+                os.path.join("/app", INDIAN_RECIPES_CSV),  # Railway absolute: /app/indian_food.csv
+                os.path.join(root_dir, INDIAN_RECIPES_CSV),  # root/indian_food.csv (project root - local dev)
                 os.path.join(current_dir, INDIAN_RECIPES_CSV),  # app/crud/indian_food.csv
                 INDIAN_RECIPES_CSV,  # Current working directory
-                os.path.join("/app", INDIAN_RECIPES_CSV),  # Railway: /app/indian_food.csv
                 os.path.join("/", INDIAN_RECIPES_CSV),  # Railway root: /indian_food.csv
                 # Also check if Railway mounts it at project root (one level up from /app)
                 os.path.abspath(os.path.join("/app", "..", INDIAN_RECIPES_CSV)),  # /app/../indian_food.csv
