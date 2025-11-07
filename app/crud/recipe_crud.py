@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from app.crud.inventory_crud import user_inventory
 from app.whatsapp_alerts import send_whatsapp_message
 from app.crud.indian_recipes import get_indian_recipes
+from app.email_service import send_notification_email
 import re
 
 load_dotenv()
@@ -714,7 +715,18 @@ def mark_recipe_as_cooked(db: Session, user_id: int, recipe_id: int, recipe_titl
             
             result = send_whatsapp_message(user.phone_number, cooked_message, template_name="recipe_cooked")
             print(f"DEBUG: Recipe cooked notification result: {result}")
-        else:
+        
+        # Send email notification alongside WhatsApp
+        if user and user.email:
+            try:
+                email_subject = f"FoodTracker - Recipe Cooked: {recipe_title}"
+                email_result = send_notification_email(user.email, email_subject, cooked_message)
+                if email_result.get("status"):
+                    print(f"DEBUG: Recipe cooked notification email sent to {user.email}")
+            except Exception as e:
+                print(f"ERROR: Failed to send recipe cooked email: {str(e)}")
+        
+        if not user.phone_number:
             print(f"DEBUG: User has no phone number. User ID: {user_id}, Phone: {user.phone_number if user else 'No user'}")
         
         return {

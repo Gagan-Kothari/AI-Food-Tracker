@@ -485,6 +485,17 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     alerts_sent[alert_type] += 1
                 else:
                     alerts_sent["failed"] += 1
+                
+                # Send email notification alongside WhatsApp
+                if user.email:
+                    try:
+                        from app.email_service import send_notification_email
+                        email_subject = f"FoodTracker - {alert_type.upper()} Alert: Items Expiring Soon"
+                        email_result = send_notification_email(user.email, email_subject, message)
+                        if email_result.get("status"):
+                            print(f"DEBUG: Expiry alert email sent to {user.email}")
+                    except Exception as e:
+                        print(f"ERROR: Failed to send expiry alert email: {str(e)}")
         
         return {
             "status": True,

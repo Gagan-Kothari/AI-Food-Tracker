@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from app.models import models
 from app.whatsapp_alerts import send_whatsapp_message
+from app.email_service import send_notification_email
 
 
 def generate_coupon_code(length: int = 12) -> str:
@@ -139,6 +140,16 @@ def claim_coupon(db: Session, user_id: int, coupon_id: int):
         except Exception as e:
             print(f"Error sending WhatsApp notification: {str(e)}")
             # Don't fail the claim if WhatsApp fails
+        
+        # Send email notification alongside WhatsApp
+        if user.email:
+            try:
+                email_subject = f"FoodTracker - Coupon Claimed: {coupon.name}"
+                email_result = send_notification_email(user.email, email_subject, message)
+                if email_result.get("status"):
+                    print(f"DEBUG: Coupon claim notification email sent to {user.email}")
+            except Exception as e:
+                print(f"ERROR: Failed to send coupon claim email: {str(e)}")
         
         return {
             "status": True,

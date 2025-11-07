@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models import models
 from datetime import datetime
 from app.whatsapp_alerts import send_whatsapp_message
+from app.email_service import send_notification_email
 
 
 def donate_items(db: Session, inventory_ids: list, user_id: int):
@@ -84,7 +85,18 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
                 
                 result = send_whatsapp_message(user.phone_number, donation_message, template_name="donation_notification")
                 print(f"DEBUG: Donation notification result: {result}")
-            else:
+            
+            # Send email notification alongside WhatsApp
+            if user and user.email:
+                try:
+                    email_subject = "FoodTracker - Thank You for Your Donation!"
+                    email_result = send_notification_email(user.email, email_subject, donation_message)
+                    if email_result.get("status"):
+                        print(f"DEBUG: Donation notification email sent to {user.email}")
+                except Exception as e:
+                    print(f"ERROR: Failed to send donation email: {str(e)}")
+            
+            if not user or not user.phone_number:
                 print(f"DEBUG: User not found or no phone number. User: {user}, Phone: {user.phone_number if user else 'No user'}")
             
             return {

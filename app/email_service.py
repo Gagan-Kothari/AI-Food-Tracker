@@ -185,6 +185,84 @@ Reply directly to this email to respond to {name} ({email}).
         }
 
 
+def send_notification_email(to_email: str, subject: str, message: str) -> dict:
+    """
+    Send notification email to user. Tries Resend API first (works on Railway), 
+    then falls back to SMTP.
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        message: Email message (plain text)
+        
+    Returns:
+        dict: Status and message
+    """
+    try:
+        # Try Resend API first (HTTP-based, works on Railway)
+        if RESEND_API_KEY and RESEND_FROM_EMAIL:
+            try:
+                url = "https://api.resend.com/emails"
+                headers = {
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                
+                payload = {
+                    "from": f"FoodTracker <{RESEND_FROM_EMAIL}>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "text": message
+                }
+                
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                
+                if response.status_code == 200:
+                    print(f"SUCCESS: Notification email sent via Resend to {to_email}")
+                    return {"status": True, "message": "Email sent successfully"}
+                else:
+                    print(f"ERROR: Resend API error: {response.status_code} - {response.text}")
+            except Exception as e:
+                print(f"ERROR: Resend API exception: {str(e)}")
+        
+        # Fall back to SMTP
+        if SMTP_USERNAME and SMTP_PASSWORD:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = SMTP_USERNAME
+                msg['To'] = to_email
+                msg['Subject'] = subject
+                msg.attach(MIMEText(message, 'plain'))
+                text = msg.as_string()
+                
+                # Try port 587 with STARTTLS first
+                try:
+                    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
+                    server.starttls()
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.sendmail(SMTP_USERNAME, to_email, text)
+                    server.quit()
+                    print(f"SUCCESS: Notification email sent via SMTP to {to_email}")
+                    return {"status": True, "message": "Email sent successfully"}
+                except (OSError, ConnectionError):
+                    # Try port 465 with SSL
+                    context = ssl.create_default_context()
+                    server = smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=10)
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                    server.sendmail(SMTP_USERNAME, to_email, text)
+                    server.quit()
+                    print(f"SUCCESS: Notification email sent via SMTP (SSL) to {to_email}")
+                    return {"status": True, "message": "Email sent successfully"}
+            except Exception as e:
+                print(f"ERROR: SMTP error: {str(e)}")
+        
+        return {"status": False, "message": "Email service not configured"}
+            
+    except Exception as e:
+        print(f"ERROR: Failed to send notification email: {str(e)}")
+        return {"status": False, "message": f"Failed to send email: {str(e)}"}
+
+
 def send_contact_email(name: str, email: str, subject: str, message: str) -> dict:
     """
     Send contact form email. Tries Resend API first (works on Railway), 
