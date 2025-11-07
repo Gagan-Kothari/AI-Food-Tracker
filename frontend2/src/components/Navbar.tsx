@@ -98,11 +98,12 @@ export default function Navbar() {
             {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Toggle dark mode"
+              className="relative p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {darkMode ? (
-                <SunIcon className="w-5 h-5" />
+                <SunIcon className="w-5 h-5 text-yellow-500" />
               ) : (
                 <MoonIcon className="w-5 h-5" />
               )}
@@ -128,11 +129,12 @@ export default function Navbar() {
           <div className="md:hidden flex items-center space-x-2">
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Toggle dark mode"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {darkMode ? (
-                <SunIcon className="w-5 h-5" />
+                <SunIcon className="w-5 h-5 text-yellow-500" />
               ) : (
                 <MoonIcon className="w-5 h-5" />
               )}
@@ -170,6 +172,23 @@ export default function Navbar() {
               )
             })}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              {/* Dark Mode Toggle for Mobile Menu */}
+              <button
+                onClick={toggleDarkMode}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md font-medium transition-colors mb-2 mx-3"
+              >
+                {darkMode ? (
+                  <>
+                    <SunIcon className="w-5 h-5 text-yellow-500" />
+                    <span>Switch to Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <MoonIcon className="w-5 h-5" />
+                    <span>Switch to Dark Mode</span>
+                  </>
+                )}
+              </button>
               {/* Points Display for Mobile */}
               <div className="flex items-center space-x-2 px-3 py-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg mx-3 mb-2">
                 <span className="text-yellow-600 dark:text-yellow-400 text-lg">🪙</span>
