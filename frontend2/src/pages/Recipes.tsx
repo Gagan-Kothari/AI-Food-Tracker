@@ -141,10 +141,10 @@ export default function Recipes() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-gray-200 h-80 rounded-lg"></div>
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 h-80 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -156,12 +156,12 @@ export default function Recipes() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to load recipes</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Unable to load recipes</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={retryFetch}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Try Again
           </button>
@@ -173,43 +173,43 @@ export default function Recipes() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Recipe Suggestions</h1>
-        <p className="text-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Recipe Suggestions</h1>
+        <p className="text-gray-600 dark:text-gray-400">
           AI-powered recipes based on your current inventory ({inventoryCount} items)
         </p>
       </div>
 
       {recipes.length === 0 ? (
         <div className="text-center py-12">
-          <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No recipes found</h2>
-          <p className="text-gray-600">Try adding more ingredients to your inventory for better recipe suggestions</p>
+          <BookOpenIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No recipes found</h2>
+          <p className="text-gray-600 dark:text-gray-400">Try adding more ingredients to your inventory for better recipe suggestions</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700"
             >
               <img src={recipe.image || "/placeholder.svg"} alt={recipe.title} className="w-full h-48 object-cover" />
               <div className="p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">{recipe.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{recipe.title}</h3>
                   {recipe.priorityScore && recipe.priorityScore > 0 && (
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       recipe.priorityScore >= 10 
-                        ? 'bg-red-100 text-red-800' 
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
                         : recipe.priorityScore >= 5 
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-green-100 text-green-800'
+                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                     }`}>
                       {recipe.priorityScore >= 10 ? 'High Priority' : recipe.priorityScore >= 5 ? 'Medium Priority' : 'Low Priority'}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
                   <div className="flex items-center">
                     <ClockIcon className="h-4 w-4 mr-1" />
                     <span>30 min</span>
@@ -222,17 +222,17 @@ export default function Recipes() {
 
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-green-600">
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
                       You have: {recipe.usedIngredientCount} ingredients
                     </span>
                     {recipe.missedIngredientCount > 0 && (
-                      <span className="text-sm text-orange-600">Need: {recipe.missedIngredientCount} more</span>
+                      <span className="text-sm text-orange-600 dark:text-orange-400">Need: {recipe.missedIngredientCount} more</span>
                     )}
                   </div>
 
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
-                      className="bg-green-500 h-2 rounded-full"
+                      className="bg-green-500 dark:bg-green-400 h-2 rounded-full"
                       style={{
                         width: `${(recipe.usedIngredientCount / (recipe.usedIngredientCount + recipe.missedIngredientCount)) * 100}%`,
                       }}
@@ -243,7 +243,7 @@ export default function Recipes() {
                 <div className="space-y-3">
                   {recipe.usedIngredients.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-1">Ingredients you have:</h4>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Ingredients you have:</h4>
                       <div className="flex flex-wrap gap-1">
                         {recipe.usedIngredients.map((ingredient) => {
                           const isExpiringSoon = ingredient.daysUntilExpiry !== undefined && ingredient.daysUntilExpiry <= 3
@@ -254,10 +254,10 @@ export default function Recipes() {
                               key={ingredient.id}
                               className={`inline-block text-xs px-2 py-1 rounded-full ${
                                 isExpiringSoon 
-                                  ? 'bg-red-100 text-red-800 border border-red-200' 
+                                  ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800' 
                                   : isExpiringThisWeek 
-                                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                                    : 'bg-green-100 text-green-800'
+                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800'
+                                    : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
                               }`}
                               title={
                                 ingredient.daysUntilExpiry !== undefined 
@@ -278,12 +278,12 @@ export default function Recipes() {
 
                   {recipe.missedIngredients.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-1">Missing ingredients:</h4>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Missing ingredients:</h4>
                       <div className="flex flex-wrap gap-1">
                         {recipe.missedIngredients.map((ingredient) => (
                           <span
                             key={ingredient.id}
-                            className="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full"
+                            className="inline-block bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs px-2 py-1 rounded-full"
                           >
                             {ingredient.name}
                           </span>
@@ -296,13 +296,13 @@ export default function Recipes() {
                 <div className="mt-6 space-y-2">
                   <button
                     onClick={() => setSelectedRecipe(recipe)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                    className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
                   >
                     View Recipe
                   </button>
                   <button
                     onClick={() => handleCookedRecipe()}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                    className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
                   >
                     I Cooked This!
                   </button>
@@ -315,12 +315,12 @@ export default function Recipes() {
 
       {/* Recipe Detail Modal */}
       {selectedRecipe && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">{selectedRecipe.title}</h2>
-                <button onClick={() => setSelectedRecipe(null)} className="text-gray-500 hover:text-gray-700">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedRecipe.title}</h2>
+                <button onClick={() => setSelectedRecipe(null)} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
                   ✕
                 </button>
               </div>
@@ -333,26 +333,26 @@ export default function Recipes() {
 
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Ingredients</h3>
+                  <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Ingredients</h3>
                   <div className="space-y-2">
                     {[...selectedRecipe.usedIngredients, ...selectedRecipe.missedIngredients].map((ingredient) => (
                       <div key={ingredient.id} className="flex items-center space-x-2">
                         <span
                           className={`w-3 h-3 rounded-full ${
                             selectedRecipe.usedIngredients.find((i) => i.id === ingredient.id)
-                              ? "bg-green-500"
-                              : "bg-orange-500"
+                              ? "bg-green-500 dark:bg-green-400"
+                              : "bg-orange-500 dark:bg-orange-400"
                           }`}
                         ></span>
-                        <span>{ingredient.name}</span>
+                        <span className="text-gray-700 dark:text-gray-300">{ingredient.name}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Instructions</h3>
-                  <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Instructions</h3>
+                  <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
                     <li>Prepare all ingredients and wash vegetables thoroughly.</li>
                     <li>Heat oil in a large pan or wok over medium-high heat.</li>
                     <li>Add aromatics (garlic, onions) and cook until fragrant.</li>
@@ -362,10 +362,10 @@ export default function Recipes() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => handleCookedRecipe()}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                  className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
                 >
                   Mark as Cooked
                 </button>

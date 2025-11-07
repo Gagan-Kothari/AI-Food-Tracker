@@ -10,7 +10,10 @@ import {
   HeartIcon,
   BookOpenIcon,
   ShoppingCartIcon,
-  ChevronRightIcon,
+  ShoppingBagIcon,
+  GiftIcon,
+  SparklesIcon,
+  ArrowRightIcon,
 } from "@heroicons/react/24/outline"
 
 export default function Dashboard() {
@@ -20,6 +23,7 @@ export default function Dashboard() {
     recipes_tried: 0,
     items_scanned: 0,
   })
+  const [userPoints, setUserPoints] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const featureCards = [
@@ -29,7 +33,7 @@ export default function Dashboard() {
       icon: CameraIcon,
       path: "/scan",
       color: "bg-blue-500",
-      hoverColor: "hover:bg-blue-600",
+      emoji: "📷",
     },
     {
       title: "My Inventory",
@@ -37,7 +41,7 @@ export default function Dashboard() {
       icon: CubeIcon,
       path: "/inventory",
       color: "bg-green-500",
-      hoverColor: "hover:bg-green-600",
+      emoji: "📦",
     },
     {
       title: "Donate Items",
@@ -45,7 +49,7 @@ export default function Dashboard() {
       icon: HeartIcon,
       path: "/donate",
       color: "bg-red-500",
-      hoverColor: "hover:bg-red-600",
+      emoji: "❤️",
     },
     {
       title: "Suggested Recipes",
@@ -53,7 +57,7 @@ export default function Dashboard() {
       icon: BookOpenIcon,
       path: "/recipes",
       color: "bg-purple-500",
-      hoverColor: "hover:bg-purple-600",
+      emoji: "🍳",
     },
     {
       title: "Grocery Suggestions",
@@ -61,84 +65,169 @@ export default function Dashboard() {
       icon: ShoppingCartIcon,
       path: "/groceries",
       color: "bg-orange-500",
-      hoverColor: "hover:bg-orange-600",
+      emoji: "🛒",
+    },
+    {
+      title: "Marketplace",
+      description: "Redeem your points for exclusive coupons",
+      icon: ShoppingBagIcon,
+      path: "/marketplace",
+      color: "bg-indigo-500",
+      emoji: "🎁",
     },
   ]
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!user?.userid) {
         setLoading(false)
         return
       }
 
       try {
-        const response = await apiService.getDashboardStats(user.userid)
-        if (response.data.status) {
+        // Fetch dashboard stats
+        const statsResponse = await apiService.getDashboardStats(user.userid)
+        if (statsResponse.data.status) {
           setStats({
-            items_donated: response.data.items_donated || 0,
-            recipes_tried: response.data.recipes_tried || 0,
-            items_scanned: response.data.items_scanned || 0,
+            items_donated: statsResponse.data.items_donated || 0,
+            recipes_tried: statsResponse.data.recipes_tried || 0,
+            items_scanned: statsResponse.data.items_scanned || 0,
           })
         }
+
+        // Fetch user points
+        const pointsResponse = await apiService.getUserPoints(user.userid)
+        if (pointsResponse.data.status) {
+          setUserPoints(pointsResponse.data.points || 0)
+        }
       } catch (error) {
-        console.error("Error fetching dashboard stats:", error)
+        console.error("Error fetching dashboard data:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchStats()
+    fetchData()
   }, [user?.userid])
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Welcome Section */}
+      {/* Header Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {user?.username}! 👋</h1>
-        <p className="text-gray-600 dark:text-gray-400">Manage your food inventory and reduce waste with smart tracking.</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Welcome back, {user?.username}! 👋
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your food inventory and reduce waste with smart tracking.
+            </p>
+          </div>
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-6 py-4">
+            <div className="flex items-center gap-2">
+              <SparklesIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Your Points</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{userPoints}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-4xl">❤️</div>
+              <div className="text-right">
+                <p className="text-sm opacity-90">Items Donated</p>
+                <p className="text-3xl font-bold">{stats.items_donated}</p>
+              </div>
+            </div>
+            <p className="text-green-100 text-sm">Items donated to NGOs</p>
+          </div>
+        </div>
 
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-4xl">📱</div>
+              <div className="text-right">
+                <p className="text-sm opacity-90">Items Scanned</p>
+                <p className="text-3xl font-bold">{stats.items_scanned}</p>
+              </div>
+            </div>
+            <p className="text-blue-100 text-sm">Total items in your inventory</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-purple-500 dark:hover:border-purple-500 hover:shadow-lg">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-4xl">🍳</div>
+              <div className="text-right">
+                <p className="text-sm opacity-90">Recipes Tried</p>
+                <p className="text-3xl font-bold">{stats.recipes_tried}</p>
+              </div>
+            </div>
+            <p className="text-purple-100 text-sm">AI-suggested recipes used</p>
+          </div>
+        </div>
+      </div>
 
       {/* Feature Cards */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {featureCards.map((card) => {
           const Icon = card.icon
           return (
             <Link key={card.title} to={card.path} className="group block">
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-lg ${card.color} ${card.hoverColor} transition-colors`}>
-                    <Icon className="h-6 w-6 text-white" />
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
+                {/* Card Header */}
+                <div className={`${card.color} p-6 text-white`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-4xl">{card.emoji}</div>
+                    <ArrowRightIcon className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
+                  <h3 className="text-xl font-bold">{card.title}</h3>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{card.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">{card.description}</p>
+
+                {/* Card Body */}
+                <div className="p-6">
+                  <p className="text-gray-700 dark:text-gray-300">{card.description}</p>
+                  <div className="mt-4 flex items-center text-sm font-medium text-green-600 dark:text-green-400 group-hover:underline">
+                    Get started
+                    <ArrowRightIcon className="w-4 h-4 ml-1" />
+                  </div>
+                </div>
               </div>
             </Link>
           )
         })}
-      </div>
-
-      {/* Quick Stats */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-r from-green-400 to-green-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">Items Donated</h3>
-          <p className="text-3xl font-bold">{loading ? "..." : stats.items_donated}</p>
-          <p className="text-green-100 text-sm">Items donated to NGOs</p>
-        </div>
-        <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">Items Scanned</h3>
-          <p className="text-3xl font-bold">{loading ? "..." : stats.items_scanned}</p>
-          <p className="text-blue-100 text-sm">Total items in your inventory</p>
-        </div>
-        <div className="bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">Recipes Tried</h3>
-          <p className="text-3xl font-bold">{loading ? "..." : stats.recipes_tried}</p>
-          <p className="text-purple-100 text-sm">AI-suggested recipes used</p>
-        </div>
       </div>
     </div>
   )
