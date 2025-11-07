@@ -11,7 +11,6 @@ import {
   BookOpenIcon,
   ShoppingCartIcon,
   ShoppingBagIcon,
-  GiftIcon,
   SparklesIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline"
@@ -203,7 +202,6 @@ export default function Dashboard() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {featureCards.map((card) => {
-          const Icon = card.icon
           return (
             <Link key={card.title} to={card.path} className="group block">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
