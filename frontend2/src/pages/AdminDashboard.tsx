@@ -163,37 +163,37 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Users</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Users</h2>
             <div className="flex gap-2">
-              <button onClick={handleTrainAll} disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Train All Models</button>
-              <button onClick={handleSendAlerts} disabled={busy} className="bg-yellow-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Send Expiry Alerts</button>
+              <button onClick={handleTrainAll} disabled={busy} className="bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60 transition-colors">Train All Models</button>
+              <button onClick={handleSendAlerts} disabled={busy} className="bg-yellow-600 dark:bg-yellow-500 hover:bg-yellow-700 dark:hover:bg-yellow-600 text-white px-4 py-2 rounded-md disabled:opacity-60 transition-colors">Send Expiry Alerts</button>
             </div>
           </div>
           {loadingUsers ? (
-            <div>Loading users...</div>
+            <div className="text-gray-600 dark:text-gray-400">Loading users...</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-2 pr-4">ID</th>
-                    <th className="py-2 pr-4">Name</th>
-                    <th className="py-2 pr-4">Email</th>
-                    <th className="py-2 pr-4">Points</th>
-                    <th className="py-2 pr-4">Actions</th>
+                  <tr className="text-left border-b border-gray-200 dark:border-gray-700">
+                    <th className="py-2 pr-4 text-gray-900 dark:text-white">ID</th>
+                    <th className="py-2 pr-4 text-gray-900 dark:text-white">Name</th>
+                    <th className="py-2 pr-4 text-gray-900 dark:text-white">Email</th>
+                    <th className="py-2 pr-4 text-gray-900 dark:text-white">Points</th>
+                    <th className="py-2 pr-4 text-gray-900 dark:text-white">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map(u => (
-                    <tr key={u.id} className="border-b">
-                      <td className="py-2 pr-4">{u.id}</td>
-                      <td className="py-2 pr-4">{u.name}</td>
-                      <td className="py-2 pr-4">{u.email}</td>
-                      <td className="py-2 pr-4">{u.points}</td>
+                    <tr key={u.id} className="border-b border-gray-200 dark:border-gray-700">
+                      <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{u.id}</td>
+                      <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{u.name}</td>
+                      <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{u.email}</td>
+                      <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{u.points}</td>
                       <td className="py-2 pr-4">
-                        <button onClick={() => handleRetrain(u.id)} disabled={busy} className="text-green-700 hover:underline disabled:opacity-60">Retrain Model</button>
+                        <button onClick={() => handleRetrain(u.id)} disabled={busy} className="text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 hover:underline disabled:opacity-60 transition-colors">Retrain Model</button>
                       </td>
                     </tr>
                   ))}
@@ -203,33 +203,33 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Add Food Item To Database</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Add Food Item To Database</h2>
           <form onSubmit={handleAddFoodItem} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Barcode *</label>
-                <input className="w-full border rounded px-3 py-2" placeholder="Barcode" value={foodItemForm.barcode} onChange={e => setFoodItemForm(s => ({ ...s, barcode: e.target.value }))} required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Barcode *</label>
+                <input className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Barcode" value={foodItemForm.barcode} onChange={e => setFoodItemForm(s => ({ ...s, barcode: e.target.value }))} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Food Name *</label>
-                <input className="w-full border rounded px-3 py-2" placeholder="Food Name" value={foodItemForm.f_name} onChange={e => setFoodItemForm(s => ({ ...s, f_name: e.target.value }))} required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Food Name *</label>
+                <input className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Food Name" value={foodItemForm.f_name} onChange={e => setFoodItemForm(s => ({ ...s, f_name: e.target.value }))} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
-                <input className="w-full border rounded px-3 py-2" placeholder="Brand" value={foodItemForm.brands} onChange={e => setFoodItemForm(s => ({ ...s, brands: e.target.value }))} required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand *</label>
+                <input className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Brand" value={foodItemForm.brands} onChange={e => setFoodItemForm(s => ({ ...s, brands: e.target.value }))} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
-                <input className="w-full border rounded px-3 py-2" placeholder="e.g., 100g, 250ml" value={foodItemForm.quantity} onChange={e => setFoodItemForm(s => ({ ...s, quantity: e.target.value }))} required />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity *</label>
+                <input className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="e.g., 100g, 250ml" value={foodItemForm.quantity} onChange={e => setFoodItemForm(s => ({ ...s, quantity: e.target.value }))} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Energy (kcal/100g) - Optional</label>
-                <input type="number" className="w-full border rounded px-3 py-2" placeholder="Energy" value={foodItemForm.energy} onChange={e => setFoodItemForm(s => ({ ...s, energy: e.target.value }))} />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Energy (kcal/100g) - Optional</label>
+                <input type="number" className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="Energy" value={foodItemForm.energy} onChange={e => setFoodItemForm(s => ({ ...s, energy: e.target.value }))} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select className="w-full border rounded px-3 py-2" value={foodItemForm.category} onChange={e => setFoodItemForm(s => ({ ...s, category: e.target.value }))} required>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category *</label>
+                <select className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent" value={foodItemForm.category} onChange={e => setFoodItemForm(s => ({ ...s, category: e.target.value }))} required>
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -237,17 +237,17 @@ export default function AdminDashboard() {
                 </select>
               </div>
             </div>
-            <button type="submit" disabled={busy} className="bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Add Food Item</button>
+            <button type="submit" disabled={busy} className="bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-60 transition-colors">Add Food Item</button>
           </form>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Add Item To User Inventory</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Add Item To User Inventory</h2>
           <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input className="border rounded px-3 py-2" placeholder="User ID" value={addForm.userid} onChange={e => setAddForm(s => ({ ...s, userid: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="Barcode" value={addForm.barcode} onChange={e => setAddForm(s => ({ ...s, barcode: e.target.value }))} required />
-            <input className="border rounded px-3 py-2" placeholder="Expiry Date (YYYY-MM-DD)" value={addForm.expiry_date} onChange={e => setAddForm(s => ({ ...s, expiry_date: e.target.value }))} required />
-            <button type="submit" disabled={busy} className="bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-60">Add Item</button>
+            <input className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="User ID" value={addForm.userid} onChange={e => setAddForm(s => ({ ...s, userid: e.target.value }))} required />
+            <input className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Barcode" value={addForm.barcode} onChange={e => setAddForm(s => ({ ...s, barcode: e.target.value }))} required />
+            <input className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Expiry Date (YYYY-MM-DD)" value={addForm.expiry_date} onChange={e => setAddForm(s => ({ ...s, expiry_date: e.target.value }))} required />
+            <button type="submit" disabled={busy} className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:opacity-60 transition-colors">Add Item</button>
           </form>
         </div>
       </div>
