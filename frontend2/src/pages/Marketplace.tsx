@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { apiService } from "../services/api"
-import { useDarkMode } from "../contexts/DarkModeContext"
 import { ShoppingBagIcon, CheckCircleIcon, SparklesIcon } from "@heroicons/react/24/outline"
 
 interface Coupon {
@@ -18,7 +17,6 @@ interface Coupon {
 
 export default function Marketplace() {
   const { user } = useAuth()
-  const { darkMode } = useDarkMode()
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [userPoints, setUserPoints] = useState(0)
   const [loading, setLoading] = useState(true)

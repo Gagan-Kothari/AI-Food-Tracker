@@ -1,11 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useDarkMode } from "../contexts/DarkModeContext"
 import { EnvelopeIcon, PhoneIcon, MapPinIcon } from "@heroicons/react/24/outline"
 
 export default function Contact() {
-  const { darkMode } = useDarkMode()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
