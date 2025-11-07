@@ -82,7 +82,7 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
                 donation_message += f"Total points: {user.points}\n\n"
                 donation_message += f"Your kindness helps reduce food waste and feeds families in need. Thank you for making a difference! 🌟"
                 
-                result = send_whatsapp_message(user.phone_number, donation_message)
+                result = send_whatsapp_message(user.phone_number, donation_message, template_name="donation_notification")
                 print(f"DEBUG: Donation notification result: {result}")
             else:
                 print(f"DEBUG: User not found or no phone number. User: {user}, Phone: {user.phone_number if user else 'No user'}")

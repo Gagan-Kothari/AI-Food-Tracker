@@ -50,7 +50,7 @@ def format_phone_number(phone: str) -> str:
     return phone
 
 
-def send_whatsapp_message(to_phone: str, message: str) -> dict:
+def send_whatsapp_message(to_phone: str, message: str, template_name: str = None) -> dict:
     """
     Send WhatsApp message via Official WhatsApp Business API
     
@@ -105,8 +105,9 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
         # Try to use custom template if available, otherwise fall back to hello_world for testing
         # Note: WhatsApp API expects phone number WITHOUT + sign (e.g., "919811546101" not "+919811546101")
         
-        # Check if we have a custom template name (can be set via environment variable)
-        template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "hello_world")
+        # Check if we have a custom template name (parameter, then environment variable, then default)
+        if template_name is None:
+            template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "hello_world")
         
         # Build template payload
         # For hello_world: no components needed (fixed message)
@@ -433,7 +434,8 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
             
             # Send all messages for this user
             for alert_type, message in messages:
-                result = send_whatsapp_message(user.phone_number, message)
+                # Use expiry_alert template for all expiry alerts
+                result = send_whatsapp_message(user.phone_number, message, template_name="expiry_alert")
                 if result["status"]:
                     alerts_sent[alert_type] += 1
                 else:

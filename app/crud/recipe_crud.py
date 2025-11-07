@@ -545,7 +545,7 @@ def mark_recipe_as_cooked(db: Session, user_id: int, recipe_id: int, recipe_titl
             cooked_message += f"Your smart cooking helps reduce food waste and keeps your kitchen fresh! 🎉\n\n"
             cooked_message += f"Keep up the great work! Every meal counts in the fight against food waste. 💚"
             
-            result = send_whatsapp_message(user.phone_number, cooked_message)
+            result = send_whatsapp_message(user.phone_number, cooked_message, template_name="recipe_cooked")
             print(f"DEBUG: Recipe cooked notification result: {result}")
         else:
             print(f"DEBUG: User has no phone number. User ID: {user_id}, Phone: {user.phone_number if user else 'No user'}")
