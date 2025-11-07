@@ -354,10 +354,199 @@ def get_place_details(place_id: str) -> Dict:
         return {}
 
 
+def detect_nearest_major_city(latitude: float, longitude: float) -> str:
+    """
+    Detect the nearest major city based on coordinates.
+    
+    Args:
+        latitude: User's latitude
+        longitude: User's longitude
+        
+    Returns:
+        City name (lowercase) or "default" if none found
+    """
+    # Top 100 Major Indian cities with approximate coordinates
+    major_cities = {
+        # Tier 1 Cities
+        "mumbai": (19.0760, 72.8777),
+        "delhi": (28.6139, 77.2090),
+        "bengaluru": (12.9716, 77.5946),
+        "hyderabad": (17.3850, 78.4867),
+        "chennai": (13.0827, 80.2707),
+        "kolkata": (22.5726, 88.3639),
+        "pune": (18.5204, 73.8567),
+        "ahmedabad": (23.0225, 72.5714),
+        "jaipur": (26.9124, 75.7873),
+        "surat": (21.1702, 72.8311),
+        
+        # Tier 2 Cities
+        "lucknow": (26.8467, 80.9462),
+        "kanpur": (26.4499, 80.3319),
+        "nagpur": (21.1458, 79.0882),
+        "indore": (22.7196, 75.8577),
+        "thane": (19.2183, 72.9781),
+        "bhopal": (23.2599, 77.4126),
+        "visakhapatnam": (17.6868, 83.2185),
+        "patna": (25.5941, 85.1376),
+        "vadodara": (22.3072, 73.1812),
+        "ghaziabad": (28.6692, 77.4538),
+        
+        "ludhiana": (30.9010, 75.8573),
+        "agra": (27.1767, 78.0081),
+        "nashik": (19.9975, 73.7898),
+        "faridabad": (28.4089, 77.3178),
+        "meerut": (28.9845, 77.7064),
+        "rajkot": (22.3039, 70.8022),
+        "varanasi": (25.3176, 82.9739),
+        "srinagar": (34.0837, 74.7973),
+        "amritsar": (31.6340, 74.8723),
+        "aurangabad": (19.8762, 75.3433),
+        
+        "dhanbad": (23.7957, 86.4304),
+        "amravati": (20.9374, 77.7796),
+        "allahabad": (25.4358, 81.8463),
+        "ranchi": (23.3441, 85.3096),
+        "howrah": (22.5958, 88.2636),
+        "jabalpur": (23.1815, 79.9864),
+        "gwalior": (26.2183, 78.1828),
+        "vijayawada": (16.5062, 80.6480),
+        "jodhpur": (26.2389, 73.0243),
+        "raipur": (21.2514, 81.6296),
+        
+        "kota": (25.2138, 75.8648),
+        "guwahati": (26.1445, 91.7362),
+        "chandigarh": (30.7333, 76.7794),
+        "solapur": (17.6599, 75.9064),
+        "hubli": (15.3647, 75.1240),
+        "mysore": (12.2958, 76.6394),
+        "tiruchirappalli": (10.7905, 78.7047),
+        "bareilly": (28.3670, 79.4304),
+        "moradabad": (28.8389, 78.7768),
+        "gurgaon": (28.4089, 77.0868),
+        
+        "aligarh": (27.8974, 78.0880),
+        "jalandhar": (31.3260, 75.5762),
+        "bhubaneswar": (20.2961, 85.8245),
+        "salem": (11.6643, 78.1460),
+        "warangal": (18.0000, 79.5833),
+        "guntur": (16.3067, 80.4365),
+        "bhiwandi": (19.3000, 73.0667),
+        "saharanpur": (29.9670, 77.5450),
+        "gorakhpur": (26.7588, 83.3697),
+        "bikaner": (28.0229, 73.3119),
+        "noida": (28.5355, 77.3910),
+        "jamshedpur": (22.8046, 86.2029),
+        "bhilai": (21.2092, 81.4285),
+        "cuttack": (20.4625, 85.8830),
+        "firozabad": (27.1500, 78.3947),
+        "kochi": (9.9312, 76.2673),
+        "nellore": (14.4426, 79.9865),
+        "bhavnagar": (21.7645, 72.1519),
+        "dehradun": (30.3165, 78.0322),
+        
+        "durgapur": (23.5204, 87.3119),
+        "asansol": (23.6889, 86.9661),
+        "rourkela": (22.2604, 84.8536),
+        "nanded": (19.1533, 77.3050),
+        "kolhapur": (16.7050, 74.2433),
+        "ajmer": (26.4499, 74.6399),
+        "akola": (20.7000, 77.0000),
+        "belgaum": (15.8497, 74.4977),
+        "jamnagar": (22.4707, 70.0587),
+        "udaipur": (24.5854, 73.7125),
+        
+        "mangalore": (12.9141, 74.8560),
+        "kozhikode": (11.2588, 75.7804),
+        "davangere": (14.4644, 75.9219),
+        "kurnool": (15.8281, 78.0373),
+        "rajahmundry": (17.0000, 81.7833),
+        "bellary": (15.1394, 76.9214),
+        "patiala": (30.3398, 76.3869),
+        "shimla": (31.1048, 77.1734),
+        "thrissur": (10.5276, 76.2144),
+        
+        "karnal": (29.6857, 76.9905),
+        "panipat": (29.3909, 76.9695),
+        "bathinda": (30.2070, 74.9455),
+        "rohtak": (28.8955, 76.6066),
+        "hisar": (29.1492, 75.7217),
+        "sonipat": (28.9931, 77.0151),
+        "panchkula": (30.6942, 76.8606),
+        "ambala": (30.3782, 76.7767),
+        "yamunanagar": (30.1290, 77.2883),
+        
+        "muzaffarnagar": (29.4709, 77.7033),
+        "bijnor": (29.3722, 78.1364),
+        "shahjahanpur": (27.8815, 79.9106),
+        "rampur": (28.8073, 79.0262),
+        "modinagar": (28.8283, 77.5792),
+        "hapur": (28.7304, 77.7814),
+        "bulandshahr": (28.4030, 77.8577),
+        "mathura": (27.4924, 77.6737),
+        "fatehpur": (25.9297, 80.8134),
+        "unnao": (26.5473, 80.4878),
+        
+        "raebareli": (26.2309, 81.2332),
+        "sultanpur": (26.2648, 82.0737),
+        "faizabad": (26.7500, 82.1500),
+        "barabanki": (26.9260, 81.1950),
+        "sitapur": (27.5619, 80.6824),
+        "hardoi": (27.3943, 80.1311),
+        "lakhimpur": (27.9483, 80.7653),
+        "pilibhit": (28.6310, 79.8044),
+        "etawah": (26.7766, 79.0214),
+        "coimbatore": (11.0168, 76.9558),
+        
+        "madurai": (9.9252, 78.1198),
+        "tirunelveli": (8.7139, 77.7567),
+        "tirupur": (11.1085, 77.3411),
+        "erode": (11.3410, 77.7172),
+        "vellore": (12.9165, 79.1325),
+        "dindigul": (10.3629, 77.9750),
+        "thanjavur": (10.7867, 79.1378),
+        "tuticorin": (8.7642, 78.1348),
+        "nagercoil": (8.1773, 77.4343),
+        "karur": (10.9601, 78.0767),
+        
+        "hospet": (15.2695, 76.3871),
+        "gadag": (15.4319, 75.6319),
+        "bidar": (17.9104, 77.5199),
+        "chitradurga": (14.2264, 76.4008),
+        "kolar": (13.1355, 78.1326),
+        "mandya": (12.5221, 76.8974),
+        "hassan": (13.0033, 76.1004),
+        "udupi": (13.3409, 74.7421),
+        "chikmagalur": (13.3161, 75.7720),
+        "shimoga": (13.9299, 75.5681),
+        
+        "tumkur": (13.3409, 77.1010),
+        "chikkaballapur": (13.4350, 77.7275),
+        "ramanagara": (12.7238, 77.2815),
+        "chamrajnagar": (11.9271, 76.9430),
+        "bagalkot": (16.1690, 75.6586),
+        "bijapur": (16.8244, 75.7154),
+        "gulbarga": (17.3297, 76.8343),
+        "raichur": (16.2076, 77.3463),
+        "koppal": (15.3547, 76.1544),
+    }
+    
+    min_distance = float('inf')
+    nearest_city = "default"
+    
+    for city_name, (city_lat, city_lon) in major_cities.items():
+        distance = calculate_distance(latitude, longitude, city_lat, city_lon)
+        if distance < min_distance:
+            min_distance = distance
+            nearest_city = city_name
+    
+    print(f"DEBUG: Nearest major city detected: {nearest_city} (distance: {min_distance:.2f} km)")
+    return nearest_city
+
+
 def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> List[Dict]:
     """
     Get NGOs near a given location based on latitude and longitude.
-    First tries Google Maps API, falls back to static data if API fails.
+    First tries Google Maps API, then searches in nearest major city if no results.
     
     Args:
         latitude: User's latitude
@@ -368,27 +557,29 @@ def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> L
         List of NGO dictionaries sorted by distance
     """
     # Try Google Maps API first
+    print(f"DEBUG: Attempting Google Maps API search for ({latitude}, {longitude})")
     google_ngos = get_ngos_from_google_maps(latitude, longitude, limit)
-    if google_ngos:
+    if google_ngos and len(google_ngos) > 0:
         print(f"DEBUG: Found {len(google_ngos)} NGOs from Google Maps")
         return google_ngos
     
-    # Fallback to static database
-    print("DEBUG: Using fallback static NGO database")
-    city = "default"
+    # If no results from Google Maps, detect nearest major city and search there
+    print("DEBUG: No NGOs found via Google Maps, detecting nearest major city")
+    nearest_city = detect_nearest_major_city(latitude, longitude)
     
-    # Mumbai coordinates (approximate)
-    if 18.9 <= latitude <= 19.3 and 72.7 <= longitude <= 73.0:
-        city = "mumbai"
-    # Delhi coordinates (approximate)
-    elif 28.4 <= latitude <= 28.9 and 77.0 <= longitude <= 77.4:
-        city = "delhi"
-    # Bangalore coordinates (approximate)
-    elif 12.8 <= latitude <= 13.1 and 77.4 <= longitude <= 77.8:
-        city = "bangalore"
+    # Try Google Maps Text Search for the nearest city
+    if nearest_city != "default" and GOOGLE_MAPS_API_KEY:
+        print(f"DEBUG: Searching for NGOs in {nearest_city} using Google Maps")
+        city_ngos = search_ngos_in_city_google_maps(nearest_city, latitude, longitude, limit)
+        if city_ngos and len(city_ngos) > 0:
+            print(f"DEBUG: Found {len(city_ngos)} NGOs in {nearest_city} via Google Maps")
+            return city_ngos
+    
+    # Fallback to static database for the nearest city
+    print(f"DEBUG: Using fallback static NGO database for {nearest_city}")
     
     # Get NGOs for the city (or default)
-    ngos = MOCK_NGO_DATABASE.get(city, MOCK_NGO_DATABASE["default"])
+    ngos = MOCK_NGO_DATABASE.get(nearest_city, MOCK_NGO_DATABASE["default"])
     
     # Calculate distance for each NGO and sort by distance
     ngos_with_distance = []
@@ -403,6 +594,97 @@ def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> L
     
     # Return top N NGOs
     return ngos_with_distance[:limit]
+
+
+def search_ngos_in_city_google_maps(city_name: str, user_lat: float, user_lon: float, limit: int = 4) -> Optional[List[Dict]]:
+    """
+    Search for NGOs in a specific city using Google Maps Text Search API.
+    
+    Args:
+        city_name: Name of the city to search in
+        user_lat: User's latitude (for distance calculation)
+        user_lon: User's longitude (for distance calculation)
+        limit: Maximum number of NGOs to return
+        
+    Returns:
+        List of NGO dictionaries or None if API call fails
+    """
+    if not GOOGLE_MAPS_API_KEY:
+        return None
+    
+    try:
+        # Capitalize city name for search
+        city_display = city_name.capitalize()
+        
+        # Search queries for the city
+        search_queries = [
+            f"NGO {city_display}",
+            f"food bank {city_display}",
+            f"charity {city_display}",
+            f"food donation {city_display}",
+            f"non-profit {city_display}"
+        ]
+        
+        url_text = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+        ngos = []
+        
+        for query in search_queries:
+            if len(ngos) >= limit * 2:
+                break
+                
+            params_text = {
+                "query": query,
+                "key": GOOGLE_MAPS_API_KEY
+            }
+            
+            try:
+                response_text = requests.get(url_text, params=params_text, timeout=10)
+                if response_text.status_code == 200:
+                    data_text = response_text.json()
+                    if data_text.get("status") == "OK" and data_text.get("results"):
+                        print(f"DEBUG: Found {len(data_text.get('results', []))} results for query: {query}")
+                        for place in data_text.get("results", []):
+                            place_id = place.get("place_id")
+                            
+                            # Skip if we already have this place
+                            if any(n.get("place_id") == place_id for n in ngos):
+                                continue
+                            
+                            place_lat = place.get("geometry", {}).get("location", {}).get("lat", user_lat)
+                            place_lon = place.get("geometry", {}).get("location", {}).get("lng", user_lon)
+                            distance = calculate_distance(user_lat, user_lon, place_lat, place_lon)
+                            
+                            # Include NGOs within reasonable distance (up to 200km from user)
+                            if distance <= 200:
+                                details = get_place_details(place_id) if place_id else {}
+                                ngo = {
+                                    "id": place_id or len(ngos) + 1,
+                                    "name": place.get("name", "Unknown NGO"),
+                                    "address": place.get("formatted_address") or details.get("formatted_address", "Address not available"),
+                                    "contact": details.get("formatted_phone_number") or details.get("international_phone_number", "Contact not available"),
+                                    "description": f"Located in {city_display}. {details.get('editorial_summary', {}).get('overview', 'Helping the community with food donations.')}",
+                                    "latitude": place_lat,
+                                    "longitude": place_lon,
+                                    "distance_km": round(distance, 2),
+                                    "rating": place.get("rating"),
+                                    "place_id": place_id
+                                }
+                                ngos.append(ngo)
+            except Exception as e:
+                print(f"DEBUG: Error in Text Search for '{query}': {str(e)}")
+                continue
+        
+        if ngos:
+            # Sort by distance and return top N
+            ngos.sort(key=lambda x: x["distance_km"])
+            print(f"DEBUG: Returning {min(len(ngos), limit)} NGOs from {city_display} (found {len(ngos)} total)")
+            return ngos[:limit]
+        else:
+            return None
+            
+    except Exception as e:
+        print(f"DEBUG: Error searching NGOs in city: {str(e)}")
+        return None
 
 
 def get_ngos_by_city(city: str, limit: int = 4) -> List[Dict]:
