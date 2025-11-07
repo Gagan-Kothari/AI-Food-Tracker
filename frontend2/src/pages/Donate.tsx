@@ -372,36 +372,37 @@ export default function Donate() {
             ) : (
               <div className="space-y-4">
                 {ngos.map((ngo) => (
-                <div
-                  key={ngo.id}
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                    selectedNGO === ngo.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
-                  }`}
-                  onClick={() => setSelectedNGO(ngo.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{ngo.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{ngo.description}</p>
-                      <div className="mt-2 text-sm text-gray-500">
-                        <p>{ngo.address}</p>
-                        <p>{ngo.contact}</p>
-                        {ngo.distance_km !== undefined && ngo.distance_km > 0 && (
-                          <p className="text-blue-600 font-medium mt-1">📍 {ngo.distance_km} km away</p>
-                        )}
+                  <div
+                    key={ngo.id}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      selectedNGO === ngo.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    onClick={() => setSelectedNGO(ngo.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{ngo.name}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{ngo.description}</p>
+                        <div className="mt-2 text-sm text-gray-500">
+                          <p>{ngo.address}</p>
+                          <p>{ngo.contact}</p>
+                          {ngo.distance_km !== undefined && ngo.distance_km > 0 && (
+                            <p className="text-blue-600 font-medium mt-1">📍 {ngo.distance_km} km away</p>
+                          )}
+                        </div>
+                      </div>
+                      <div
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          selectedNGO === ngo.id ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                        }`}
+                      >
+                        {selectedNGO === ngo.id && <CheckCircleIcon className="w-3 h-3 text-white" />}
                       </div>
                     </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        selectedNGO === ngo.id ? "border-blue-500 bg-blue-500" : "border-gray-300"
-                      }`}
-                    >
-                      {selectedNGO === ngo.id && <CheckCircleIcon className="w-3 h-3 text-white" />}
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Donate Button */}
             <div className="mt-6">

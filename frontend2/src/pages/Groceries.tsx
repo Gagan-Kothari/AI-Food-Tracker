@@ -204,87 +204,38 @@ export default function Groceries() {
                   key={item.id}
                   className={`p-6 transition-colors ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Left Section: Checkbox and Item Info */}
-                    <div className="flex items-start space-x-4 flex-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleItemSelection(item.id)
-                        }}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                          selectedItems.has(item.id) ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
-                        }`}
-                      >
-                        {selectedItems.has(item.id) && <CheckIcon className="w-3 h-3 text-white" />}
-                      </button>
+                  <div className="space-y-4">
+                    {/* Top Row: Checkbox, Item Info, and Quantity */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start space-x-4 flex-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleItemSelection(item.id)
+                          }}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                            selectedItems.has(item.id) ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          {selectedItems.has(item.id) && <CheckIcon className="w-3 h-3 text-white" />}
+                        </button>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-medium text-gray-900 dark:text-white text-lg">{item.name}</h3>
-                          {item.suggested && (
-                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Suggested</span>
-                          )}
-                          <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(item.priority)}`}>
-                            {item.priority} priority
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{item.reason}</p>
-                        
-                        {/* Grocery Store Links - EXTREMELY PROMINENT */}
-                        <div className="mt-6 mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-4 border-yellow-400 dark:border-yellow-600 rounded-xl">
-                          <p className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                            <ShoppingCartIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                            <span>🛒 Buy from online stores:</span>
-                          </p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => {
-                              console.log(`Rendering button for ${store}: ${url}`)
-                              return (
-                                <button
-                                  key={store}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    console.log(`CLICKED: ${store} for ${item.name}`)
-                                    handleStoreClick(store, url, item.name)
-                                  }}
-                                  style={{
-                                    backgroundColor: '#2563eb',
-                                    color: 'white',
-                                    padding: '12px 16px',
-                                    borderRadius: '12px',
-                                    border: '3px solid #1d4ed8',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    fontSize: '14px',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    minHeight: '80px',
-                                    justifyContent: 'center'
-                                  }}
-                                  className="hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all"
-                                  onMouseEnter={() => console.log(`Hovering over ${store}`)}
-                                >
-                                  <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                                    {store.charAt(0).toUpperCase() + store.slice(1)}
-                                  </span>
-                                  <ArrowTopRightOnSquareIcon className="w-5 h-5" style={{ color: 'white' }} />
-                                </button>
-                              )
-                            })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-medium text-gray-900 dark:text-white text-lg">{item.name}</h3>
+                            {item.suggested && (
+                              <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Suggested</span>
+                            )}
+                            <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(item.priority)}`}>
+                              {item.priority} priority
+                            </span>
                           </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{item.reason}</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Right Section: Quantity Controls */}
-                    <div className="flex items-center space-x-4 flex-shrink-0 lg:ml-4">
-                      <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-2 flex-shrink-0">
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -306,6 +257,55 @@ export default function Groceries() {
                         >
                           <PlusIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                         </button>
+                      </div>
+                    </div>
+
+                    {/* Grocery Store Links - SEPARATE ROW, ALWAYS VISIBLE */}
+                    <div className="w-full mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
+                      {/* TEST: This red box should always be visible */}
+                      <div className="mb-2 p-2 bg-red-500 text-white font-bold text-center">
+                        TEST: Store buttons should appear below this red box
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 rounded-xl border-4 border-blue-500 dark:border-blue-400 shadow-2xl">
+                        <div className="flex items-center gap-2 mb-4">
+                          <ShoppingCartIcon className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                          <p className="text-lg font-extrabold text-gray-900 dark:text-white">
+                            🛒 Buy from online stores:
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => {
+                            const storeName = store.charAt(0).toUpperCase() + store.slice(1)
+                            console.log(`[GROCERIES] Rendering button: ${storeName} for ${item.name}`)
+                            return (
+                              <button
+                                key={`${item.id}-${store}`}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  console.log(`[GROCERIES] CLICKED: ${storeName} for ${item.name} - ${url}`)
+                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                }}
+                                className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-xl text-white font-extrabold text-base shadow-2xl hover:shadow-3xl transform hover:scale-110 active:scale-95 transition-all duration-200 min-h-[100px] cursor-pointer"
+                                style={{
+                                  backgroundColor: '#2563eb',
+                                  color: '#ffffff',
+                                  border: '4px solid #1d4ed8',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                onMouseEnter={() => console.log(`[GROCERIES] Hover: ${storeName}`)}
+                              >
+                                <span style={{ fontSize: '18px', fontWeight: '900' }}>{storeName}</span>
+                                <ArrowTopRightOnSquareIcon className="w-6 h-6" style={{ color: 'white' }} />
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
