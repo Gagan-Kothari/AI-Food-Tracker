@@ -42,6 +42,7 @@ export default function Donate() {
   const [selectedCity, setSelectedCity] = useState<string>("")
   const [locationDenied, setLocationDenied] = useState(false)
   const [locationRequested, setLocationRequested] = useState(false)
+  const [searchingLocation, setSearchingLocation] = useState<string>("")
 
   useEffect(() => {
     fetchEligibleItems()
@@ -61,6 +62,9 @@ export default function Donate() {
           async (position) => {
             const { latitude, longitude } = position.coords
             console.log(`Location obtained: ${latitude}, ${longitude}`)
+            // Format location for display
+            const locationText = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+            setSearchingLocation(locationText)
             try {
               const response = await apiService.getNGOs(latitude, longitude)
               console.log("=== NGO API RESPONSE ===")
@@ -90,6 +94,7 @@ export default function Donate() {
               await fetchNGOsByCity("default")
             } finally {
               setLoadingNGOs(false)
+              setSearchingLocation("")
             }
           },
           async (error) => {
@@ -121,6 +126,9 @@ export default function Donate() {
     try {
       console.log(`=== Fetching NGOs by city: ${city} ===`)
       setLoadingNGOs(true)
+      // Format city name for display (capitalize first letter)
+      const cityDisplay = city === "default" ? "your area" : city.charAt(0).toUpperCase() + city.slice(1)
+      setSearchingLocation(cityDisplay)
       const response = await apiService.getNGOs(undefined, undefined, city)
       console.log("=== NGO API RESPONSE (CITY) ===")
       console.log("Full response:", JSON.stringify(response.data, null, 2))
@@ -148,6 +156,7 @@ export default function Donate() {
       setNGOs([])
     } finally {
       setLoadingNGOs(false)
+      setSearchingLocation("")
     }
   }
 
@@ -424,6 +433,15 @@ export default function Donate() {
               </div>
             ) : loadingNGOs ? (
               <div className="space-y-4">
+                <div className="text-center py-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-4"></div>
+                  <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                    Finding NGOs near {searchingLocation || "your location"}...
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Please wait while we search for nearby organizations
+                  </p>
+                </div>
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="border-2 rounded-lg p-4 animate-pulse bg-gray-100 dark:bg-gray-700">
                     <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
