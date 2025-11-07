@@ -244,9 +244,120 @@ def clean_ingredients(ingredients_str: str) -> str:
     return ingredients_str
 
 
+# Comprehensive ingredient synonym dictionary
+# Groups semantically similar ingredients together
+INGREDIENT_SYNONYMS = {
+    # Wheat-based products (but different from each other)
+    'wheat flour': ['wheat flour', 'whole wheat flour', 'wholewheat flour', 'wheatmeal'],
+    'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour', 'plain flour', 'white flour'],
+    'atta': ['atta', 'whole wheat atta', 'chakki atta'],
+    'wheat bran': ['wheat bran', 'bran'],
+    'semolina': ['semolina', 'sooji', 'rava', 'suji'],
+    'rice flour': ['rice flour', 'rice powder'],
+    'besan': ['besan', 'gram flour', 'chickpea flour', 'chana flour'],
+    'corn flour': ['corn flour', 'cornflour', 'cornstarch', 'corn starch'],
+    'ragi flour': ['ragi flour', 'finger millet flour', 'nachni flour'],
+    
+    # Dairy products
+    'milk': ['milk', 'whole milk', 'full cream milk', 'dairy milk'],
+    'curd': ['curd', 'yogurt', 'yoghurt', 'dahi', 'plain yogurt'],
+    'ghee': ['ghee', 'clarified butter'],
+    'butter': ['butter', 'unsalted butter', 'salted butter'],
+    'cream': ['cream', 'fresh cream', 'heavy cream', 'whipping cream'],
+    'paneer': ['paneer', 'cottage cheese', 'indian cottage cheese'],
+    
+    # Oils and fats
+    'oil': ['oil', 'cooking oil', 'vegetable oil'],
+    'sunflower oil': ['sunflower oil', 'refined sunflower oil'],
+    'mustard oil': ['mustard oil', 'sarson ka tel'],
+    'coconut oil': ['coconut oil', 'coconut cooking oil'],
+    'olive oil': ['olive oil', 'extra virgin olive oil'],
+    
+    # Spices and seasonings
+    'turmeric': ['turmeric', 'haldi', 'turmeric powder'],
+    'red chili powder': ['red chili powder', 'red chilli powder', 'lal mirch powder', 'kashmiri red chili powder'],
+    'cumin': ['cumin', 'jeera', 'cumin seeds'],
+    'coriander': ['coriander', 'dhania', 'coriander powder', 'dhania powder'],
+    'garam masala': ['garam masala', 'garam masala powder'],
+    'salt': ['salt', 'table salt', 'sea salt', 'rock salt'],
+    'black pepper': ['black pepper', 'kali mirch', 'pepper', 'black peppercorns'],
+    
+    # Vegetables
+    'onion': ['onion', 'onions', 'pyaz', 'yellow onion', 'red onion'],
+    'tomato': ['tomato', 'tomatoes', 'tamatar'],
+    'garlic': ['garlic', 'lehsun', 'garlic cloves'],
+    'ginger': ['ginger', 'adrak', 'ginger root'],
+    'potato': ['potato', 'potatoes', 'aloo'],
+    'green chili': ['green chili', 'green chilli', 'hari mirch'],
+    'spinach': ['spinach', 'palak'],
+    'cauliflower': ['cauliflower', 'gobi', 'phool gobi'],
+    'cabbage': ['cabbage', 'patta gobi', 'bandh gobi'],
+    'carrot': ['carrot', 'carrots', 'gajar'],
+    'peas': ['peas', 'green peas', 'matar'],
+    
+    # Legumes and pulses
+    'chickpeas': ['chickpeas', 'chana', 'kabuli chana', 'white chickpeas'],
+    'lentils': ['lentils', 'dal', 'dhal'],
+    'toor dal': ['toor dal', 'arhar dal', 'pigeon peas'],
+    'moong dal': ['moong dal', 'mung dal', 'green gram dal'],
+    'urad dal': ['urad dal', 'black gram dal', 'white urad dal'],
+    
+    # Rice and grains
+    'rice': ['rice', 'basmati rice', 'white rice', 'brown rice'],
+    'poha': ['poha', 'beaten rice', 'flattened rice'],
+    
+    # Other common ingredients
+    'sugar': ['sugar', 'white sugar', 'granulated sugar', 'chini'],
+    'jaggery': ['jaggery', 'gur', 'gud'],
+    'coconut': ['coconut', 'fresh coconut', 'grated coconut', 'nariyal'],
+    'cashew': ['cashew', 'cashews', 'cashew nuts', 'kaju'],
+    'almond': ['almonds', 'almond', 'badam'],
+    'raisin': ['raisin', 'raisins', 'kishmish'],
+    'jam': ['jam', 'fruit jam', 'preserve'],
+    'honey': ['honey', 'shahad', 'natural honey'],
+}
+
+
+def get_ingredient_synonyms(ingredient: str) -> set:
+    """
+    Get all synonyms for an ingredient, including the ingredient itself.
+    Uses fuzzy matching to find the best synonym group.
+    
+    Args:
+        ingredient: Ingredient name to find synonyms for
+        
+    Returns:
+        set: Set of all synonyms including the ingredient itself
+    """
+    ingredient_lower = ingredient.lower().strip()
+    synonyms = {ingredient_lower}  # Always include the original
+    
+    # Direct match in synonym dictionary
+    for key, synonym_list in INGREDIENT_SYNONYMS.items():
+        # Check if ingredient matches the key or any synonym
+        if ingredient_lower == key or ingredient_lower in synonym_list:
+            synonyms.update([key] + synonym_list)
+            break
+        # Check if any synonym is contained in the ingredient
+        for synonym in synonym_list:
+            if synonym in ingredient_lower or ingredient_lower in synonym:
+                synonyms.update([key] + synonym_list)
+                break
+    
+    # Also check reverse - if ingredient contains any key
+    for key, synonym_list in INGREDIENT_SYNONYMS.items():
+        if key in ingredient_lower:
+            synonyms.update([key] + synonym_list)
+        for synonym in synonym_list:
+            if synonym in ingredient_lower and len(synonym) > 3:  # Avoid short matches
+                synonyms.update([key] + synonym_list)
+    
+    return synonyms
+
+
 def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = True) -> bool:
     """
-    Strict matching for Indian recipes - requires exact or very close matches.
+    Strict matching for Indian recipes using semantic synonyms.
     For foreign recipes, allows more flexible matching.
     
     Args:
@@ -264,17 +375,44 @@ def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = Tr
     if recipe_ing == user_ing:
         return True
     
+    # Get synonyms for both ingredients
+    recipe_synonyms = get_ingredient_synonyms(recipe_ing)
+    user_synonyms = get_ingredient_synonyms(user_ing)
+    
+    # Check if any synonyms overlap (semantic match)
+    if recipe_synonyms.intersection(user_synonyms):
+        # They share synonyms - check if they're in the same semantic group
+        # Find which synonym groups they belong to
+        recipe_groups = []
+        user_groups = []
+        
+        for key, synonym_list in INGREDIENT_SYNONYMS.items():
+            if recipe_ing == key or recipe_ing in synonym_list or any(s in recipe_ing for s in synonym_list):
+                recipe_groups.append(key)
+            if user_ing == key or user_ing in synonym_list or any(s in user_ing for s in synonym_list):
+                user_groups.append(key)
+        
+        # If they're in the same group, it's a match
+        if recipe_groups and user_groups:
+            if set(recipe_groups).intersection(set(user_groups)):
+                return True
+        
+        # Also check direct synonym overlap
+        if recipe_synonyms.intersection(user_synonyms):
+            return True
+    
     if is_indian:
-        # For Indian recipes, be stricter
-        # Don't match different flour types
-        flour_types = {
-            'wheat flour': ['wheat flour', 'whole wheat flour'],
-            'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour'],
-            'atta': ['atta', 'whole wheat flour'],
+        # For Indian recipes, be stricter about flour types
+        # Don't match different flour types (wheat flour != wheat bran)
+        flour_categories = {
+            'wheat flour': ['wheat flour', 'whole wheat flour', 'wholewheat flour', 'wheatmeal'],
+            'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour', 'plain flour'],
+            'atta': ['atta', 'whole wheat atta'],
+            'wheat bran': ['wheat bran', 'bran'],  # Different from wheat flour!
             'semolina': ['semolina', 'sooji', 'rava'],
             'rice flour': ['rice flour'],
             'besan': ['besan', 'gram flour', 'chickpea flour'],
-            'corn flour': ['corn flour', 'cornflour', 'cornstarch'],
+            'corn flour': ['corn flour', 'cornflour'],
             'ragi flour': ['ragi flour', 'finger millet flour']
         }
         
@@ -282,12 +420,13 @@ def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = Tr
         recipe_flour_type = None
         user_flour_type = None
         
-        for flour_name, variants in flour_types.items():
+        for flour_name, variants in flour_categories.items():
             for variant in variants:
-                if variant in recipe_ing:
+                # Use word boundary matching to avoid "wheat flour" matching "wheat bran"
+                if re.search(r'\b' + re.escape(variant) + r'\b', recipe_ing):
                     recipe_flour_type = flour_name
                     break
-                if variant in user_ing:
+                if re.search(r'\b' + re.escape(variant) + r'\b', user_ing):
                     user_flour_type = flour_name
                     break
             if recipe_flour_type and user_flour_type:
@@ -301,22 +440,25 @@ def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = Tr
         if recipe_flour_type or user_flour_type:
             return False
         
-        # For non-flour items, allow partial match but be more careful
-        # Only match if one is contained in the other and they're similar length
+        # For non-flour items, check if they share synonyms
+        if recipe_synonyms.intersection(user_synonyms):
+            return True
+        
+        # Allow partial match for non-flour items but be careful
         if user_ing in recipe_ing:
-            # User ingredient is in recipe (e.g., "jam" in "raspberry jam")
-            # Check if it's a reasonable match (not too different in length)
-            if len(recipe_ing) - len(user_ing) <= 15:  # Allow some prefix/suffix
+            if len(recipe_ing) - len(user_ing) <= 15:
                 return True
         elif recipe_ing in user_ing:
-            # Recipe ingredient is in user ingredient (e.g., "onion" in "red onion")
             if len(user_ing) - len(recipe_ing) <= 15:
                 return True
         
         return False
     else:
         # For foreign recipes, more flexible matching
-        # Allow "wheat flour" to match "refined wheat flour" for foreign recipes
+        # Check synonyms first
+        if recipe_synonyms.intersection(user_synonyms):
+            return True
+        # Then check substring match
         if user_ing in recipe_ing or recipe_ing in user_ing:
             return True
         return False
@@ -460,42 +602,58 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
             if similarities[idx] <= 0:
                 continue  # Skip recipes with no matching ingredients
             
-            recipe = df.iloc[idx].to_dict()
-            recipe_name = recipe.get('name', '')
+            # Get recipe data directly from dataframe row
+            row = df.iloc[idx]
+            recipe = row.to_dict()
+            recipe_name = recipe.get('name', '') or str(row.get('name', ''))
             
             # Avoid duplicates
             if recipe_name in seen_names:
                 continue
             seen_names.add(recipe_name)
             
-            # Extract image URL directly from dataframe (before converting to dict)
-            # The CSV has 'image_url' column which becomes 'image_url' after normalization
+            # Extract image URL - try multiple methods to ensure we get it
             recipe_image = ""
             try:
-                # Access directly from dataframe to ensure we get the right column
-                row = df.iloc[idx]
-                # Check for image_url column (normalized to lowercase)
+                # Method 1: Direct access from dataframe row
                 if 'image_url' in df.columns:
-                    img_val = row['image_url']  # Use bracket notation for pandas Series
-                    if pd.notna(img_val) and img_val:
+                    img_val = row['image_url']
+                    if pd.notna(img_val):
                         img_str = str(img_val).strip()
-                        if img_str and img_str.lower() != 'nan' and img_str.lower() != 'none' and (img_str.startswith('http://') or img_str.startswith('https://')):
+                        if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
                             recipe_image = img_str
-                            print(f"DEBUG: Found image for {recipe_name}: {recipe_image[:50]}...")
-            except (KeyError, IndexError, Exception) as e:
+                            print(f"DEBUG: Found image (method 1) for {recipe_name}: {recipe_image[:60]}...")
+                
+                # Method 2: From dict if method 1 didn't work
+                if not recipe_image:
+                    img_val = recipe.get('image_url', '')
+                    if img_val and pd.notna(img_val):
+                        img_str = str(img_val).strip()
+                        if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
+                            recipe_image = img_str
+                            print(f"DEBUG: Found image (method 2) for {recipe_name}: {recipe_image[:60]}...")
+                
+                # Method 3: Search all columns with 'image' in name
+                if not recipe_image:
+                    for col in df.columns:
+                        if 'image' in str(col).lower():
+                            try:
+                                img_val = row[col]
+                                if pd.notna(img_val):
+                                    img_str = str(img_val).strip()
+                                    if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
+                                        recipe_image = img_str
+                                        print(f"DEBUG: Found image (method 3, col={col}) for {recipe_name}: {recipe_image[:60]}...")
+                                        break
+                            except Exception as e:
+                                continue
+                
+                if not recipe_image:
+                    print(f"DEBUG: No image found for {recipe_name}. Available columns: {[c for c in df.columns if 'image' in c.lower()]}")
+            except Exception as e:
                 print(f"DEBUG: Error extracting image for recipe {recipe_name}: {str(e)}")
-                # Try alternative column names
-                for col in df.columns:
-                    if 'image' in str(col).lower():
-                        try:
-                            img_val = row[col]
-                            if pd.notna(img_val) and img_val:
-                                img_str = str(img_val).strip()
-                                if img_str and img_str.lower() != 'nan' and (img_str.startswith('http://') or img_str.startswith('https://')):
-                                    recipe_image = img_str
-                                    break
-                        except:
-                            continue
+                import traceback
+                traceback.print_exc()
             
             # Extract ingredients list
             recipe_ingredients_str = recipe.get('ingredients', '')
