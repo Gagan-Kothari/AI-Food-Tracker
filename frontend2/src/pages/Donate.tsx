@@ -37,18 +37,22 @@ export default function Donate() {
   const [redirectCountdown, setRedirectCountdown] = useState(3)
   const [error, setError] = useState<string | null>(null)
   const [ngos, setNGOs] = useState<NGO[]>([])
-  const [loadingNGOs, setLoadingNGOs] = useState(true)
+  const [loadingNGOs, setLoadingNGOs] = useState(false)
   const [selectedCity, setSelectedCity] = useState<string>("")
+  const [locationDenied, setLocationDenied] = useState(false)
+  const [locationRequested, setLocationRequested] = useState(false)
 
   useEffect(() => {
     fetchEligibleItems()
-    fetchNGOs()
+    // Don't auto-fetch NGOs, wait for user to click button
   }, [])
 
-  const fetchNGOs = async () => {
+  const requestLocationAndFetchNGOs = async () => {
     try {
       setLoadingNGOs(true)
-      console.log("Fetching NGOs...")
+      setLocationRequested(true)
+      setLocationDenied(false)
+      console.log("Requesting location permission...")
       
       // Try to get user's location
       if (navigator.geolocation) {
@@ -64,32 +68,39 @@ export default function Donate() {
                 setNGOs(response.data.ngos)
               } else {
                 console.warn("Invalid NGO response format:", response.data)
-                // Fallback to city-based search
-                await fetchNGOsByCity()
+                // Fallback to static NGOs
+                await fetchNGOsByCity("default")
               }
             } catch (error) {
               console.error("Error fetching NGOs by location:", error)
-              // Fallback to city-based search
-              await fetchNGOsByCity()
+              // Fallback to static NGOs
+              await fetchNGOsByCity("default")
             } finally {
               setLoadingNGOs(false)
             }
           },
           async (error) => {
             console.warn("Geolocation error:", error)
-            // Fallback to city-based search
-            await fetchNGOsByCity()
+            setLocationDenied(true)
+            // Fallback to static NGOs
+            await fetchNGOsByCity("default")
           },
-          { timeout: 5000, enableHighAccuracy: false }
+          { 
+            timeout: 10000, 
+            enableHighAccuracy: true,
+            maximumAge: 0  // Force fresh location
+          }
         )
       } else {
-        console.log("Geolocation not supported, using city-based search")
-        // Browser doesn't support geolocation, use city-based search
-        await fetchNGOsByCity()
+        console.log("Geolocation not supported, using static NGOs")
+        setLocationDenied(true)
+        // Browser doesn't support geolocation, use static NGOs
+        await fetchNGOsByCity("default")
       }
     } catch (error) {
       console.error("Error fetching NGOs:", error)
-      await fetchNGOsByCity()
+      setLocationDenied(true)
+      await fetchNGOsByCity("default")
     }
   }
 
@@ -325,49 +336,80 @@ export default function Donate() {
           {/* NGO Selection */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Select NGO</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Select NGO</h2>
               <div className="flex items-center gap-2">
-                <select
-                  value={selectedCity}
-                  onChange={(e) => {
-                    const city = e.target.value
-                    setSelectedCity(city)
-                    if (city) {
-                      fetchNGOsByCity(city)
-                    }
-                  }}
-                  className="text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Auto-detect</option>
-                  <option value="mumbai">Mumbai</option>
-                  <option value="delhi">Delhi</option>
-                  <option value="bangalore">Bangalore</option>
-                </select>
-                <button
-                  onClick={() => {
-                    setSelectedCity("")
-                    fetchNGOs()
-                  }}
-                  className="text-sm text-blue-600 hover:text-blue-700 px-2 py-1"
-                  title="Refresh NGOs using your location"
-                >
-                  🔄
-                </button>
+                {!locationRequested && (
+                  <button
+                    onClick={requestLocationAndFetchNGOs}
+                    className="text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2"
+                    title="Share your location to find nearby NGOs"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Find Nearby NGOs
+                  </button>
+                )}
+                {locationRequested && (
+                  <>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => {
+                        const city = e.target.value
+                        setSelectedCity(city)
+                        if (city) {
+                          fetchNGOsByCity(city)
+                        }
+                      }}
+                      className="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select City</option>
+                      <option value="mumbai">Mumbai</option>
+                      <option value="delhi">Delhi</option>
+                      <option value="bangalore">Bangalore</option>
+                    </select>
+                    <button
+                      onClick={requestLocationAndFetchNGOs}
+                      className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1"
+                      title="Refresh NGOs using your location"
+                    >
+                      🔄
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            {loadingNGOs ? (
+            {locationDenied && !loadingNGOs && (
+              <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  Location access denied. Showing static NGO list. You can select a city above or click the refresh button to try again.
+                </p>
+              </div>
+            )}
+            {!locationRequested && ngos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p className="text-lg font-medium mb-2">Find Nearby NGOs</p>
+                <p className="text-sm mb-4">Click "Find Nearby NGOs" above to search for NGOs near your location using Google Maps.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Or select a city from the dropdown to see static NGO options.</p>
+              </div>
+            ) : loadingNGOs ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="border-2 rounded-lg p-4 animate-pulse bg-gray-100">
-                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-300 rounded w-full mb-1"></div>
-                    <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+                  <div key={i} className="border-2 rounded-lg p-4 animate-pulse bg-gray-100 dark:bg-gray-700">
+                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-full mb-1"></div>
+                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-2/3"></div>
                   </div>
                 ))}
               </div>
             ) : ngos.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>No NGOs found in your area. Please try again later.</p>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No NGOs found. Please try selecting a city or sharing your location again.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -375,25 +417,32 @@ export default function Donate() {
                   <div
                     key={ngo.id}
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedNGO === ngo.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                      selectedNGO === ngo.id 
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400" 
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                     onClick={() => setSelectedNGO(ngo.id)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{ngo.name}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{ngo.description}</p>
-                        <div className="mt-2 text-sm text-gray-500">
-                          <p>{ngo.address}</p>
-                          <p>{ngo.contact}</p>
-                          {ngo.distance_km !== undefined && ngo.distance_km > 0 && (
-                            <p className="text-blue-600 font-medium mt-1">📍 {ngo.distance_km} km away</p>
-                          )}
-                        </div>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 dark:text-white">{ngo.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{ngo.description}</p>
+                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <p>{ngo.address}</p>
+                        <p>{ngo.contact}</p>
+                        {ngo.distance_km !== undefined && ngo.distance_km > 0 && (
+                          <p className="text-blue-600 dark:text-blue-400 font-medium mt-1">📍 {ngo.distance_km} km away</p>
+                        )}
+                        {ngo.rating && (
+                          <p className="text-yellow-600 dark:text-yellow-400 mt-1">⭐ {ngo.rating}/5</p>
+                        )}
                       </div>
+                    </div>
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          selectedNGO === ngo.id ? "border-blue-500 bg-blue-500" : "border-gray-300"
+                          selectedNGO === ngo.id 
+                            ? "border-blue-500 bg-blue-500 dark:border-blue-400 dark:bg-blue-500" 
+                            : "border-gray-300 dark:border-gray-600"
                         }`}
                       >
                         {selectedNGO === ngo.id && <CheckCircleIcon className="w-3 h-3 text-white" />}
@@ -430,3 +479,4 @@ export default function Donate() {
     </div>
   )
 }
+

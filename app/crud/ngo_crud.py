@@ -1,10 +1,18 @@
 """
 NGO-related CRUD operations
 """
-from typing import List, Dict
+from typing import List, Dict, Optional
 import math
+import os
+import requests
+from dotenv import load_dotenv
 
-# Mock NGO database - In production, this would be a real database
+load_dotenv()
+
+# Google Maps API key
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
+# Mock NGO database - Fallback when location is denied or API fails
 # Format: {city: [list of NGOs]}
 MOCK_NGO_DATABASE = {
     "mumbai": [
@@ -172,9 +180,117 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 
+def get_ngos_from_google_maps(latitude: float, longitude: float, limit: int = 4) -> Optional[List[Dict]]:
+    """
+    Get NGOs from Google Maps Places API near a given location.
+    
+    Args:
+        latitude: User's latitude
+        longitude: User's longitude
+        limit: Maximum number of NGOs to return (default: 4)
+        
+    Returns:
+        List of NGO dictionaries or None if API call fails
+    """
+    if not GOOGLE_MAPS_API_KEY:
+        print("DEBUG: Google Maps API key not configured, using fallback")
+        return None
+    
+    try:
+        # Search for NGOs, food banks, charities near the location
+        url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        params = {
+            "location": f"{latitude},{longitude}",
+            "radius": 10000,  # 10km radius
+            "type": "establishment",
+            "keyword": "NGO food bank charity donation",
+            "key": GOOGLE_MAPS_API_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if data.get("status") == "OK" and data.get("results"):
+                ngos = []
+                for place in data.get("results", [])[:limit]:
+                    # Get place details for more information
+                    place_id = place.get("place_id")
+                    details = get_place_details(place_id) if place_id else {}
+                    
+                    # Calculate distance
+                    place_lat = place.get("geometry", {}).get("location", {}).get("lat", latitude)
+                    place_lng = place.get("geometry", {}).get("location", {}).get("lng", longitude)
+                    distance = calculate_distance(latitude, longitude, place_lat, place_lng)
+                    
+                    ngo = {
+                        "id": place_id or len(ngos) + 1,
+                        "name": place.get("name", "Unknown NGO"),
+                        "address": place.get("vicinity") or details.get("formatted_address", "Address not available"),
+                        "contact": details.get("formatted_phone_number") or details.get("international_phone_number", "Contact not available"),
+                        "description": f"Located near you. {details.get('editorial_summary', {}).get('overview', 'Helping the community with food donations.')}",
+                        "latitude": place_lat,
+                        "longitude": place_lng,
+                        "distance_km": round(distance, 2),
+                        "rating": place.get("rating"),
+                        "place_id": place_id
+                    }
+                    ngos.append(ngo)
+                
+                # Sort by distance
+                ngos.sort(key=lambda x: x["distance_km"])
+                return ngos
+            else:
+                print(f"DEBUG: Google Maps API returned status: {data.get('status')}")
+                return None
+        else:
+            print(f"DEBUG: Google Maps API request failed with status {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"DEBUG: Error calling Google Maps API: {str(e)}")
+        return None
+
+
+def get_place_details(place_id: str) -> Dict:
+    """
+    Get detailed information about a place using Google Maps Places API.
+    
+    Args:
+        place_id: Google Maps place ID
+        
+    Returns:
+        Dictionary with place details
+    """
+    if not GOOGLE_MAPS_API_KEY or not place_id:
+        return {}
+    
+    try:
+        url = "https://maps.googleapis.com/maps/api/place/details/json"
+        params = {
+            "place_id": place_id,
+            "fields": "formatted_address,formatted_phone_number,international_phone_number,editorial_summary",
+            "key": GOOGLE_MAPS_API_KEY
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "OK":
+                return data.get("result", {})
+        
+        return {}
+    except Exception as e:
+        print(f"DEBUG: Error getting place details: {str(e)}")
+        return {}
+
+
 def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> List[Dict]:
     """
     Get NGOs near a given location based on latitude and longitude.
+    First tries Google Maps API, falls back to static data if API fails.
     
     Args:
         latitude: User's latitude
@@ -184,7 +300,14 @@ def get_ngos_by_location(latitude: float, longitude: float, limit: int = 4) -> L
     Returns:
         List of NGO dictionaries sorted by distance
     """
-    # Determine city based on coordinates (simplified - in production, use reverse geocoding)
+    # Try Google Maps API first
+    google_ngos = get_ngos_from_google_maps(latitude, longitude, limit)
+    if google_ngos:
+        print(f"DEBUG: Found {len(google_ngos)} NGOs from Google Maps")
+        return google_ngos
+    
+    # Fallback to static database
+    print("DEBUG: Using fallback static NGO database")
     city = "default"
     
     # Mumbai coordinates (approximate)
