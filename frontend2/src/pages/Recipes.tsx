@@ -190,14 +190,14 @@ export default function Recipes() {
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col h-full"
             >
-              <img src={recipe.image || "/placeholder.svg"} alt={recipe.title} className="w-full h-48 object-cover" />
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{recipe.title}</h3>
-                  {recipe.priorityScore && recipe.priorityScore > 0 && (
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+              <img src={recipe.image || "/placeholder.svg"} alt={recipe.title} className="w-full h-48 object-cover flex-shrink-0" />
+              <div className="p-6 flex flex-col flex-1">
+                <div className="flex items-start justify-between mb-2 min-h-[3rem]">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 pr-2">{recipe.title}</h3>
+                  {recipe.priorityScore && recipe.priorityScore > 0 ? (
+                    <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                       recipe.priorityScore >= 10 
                         ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
                         : recipe.priorityScore >= 5 
@@ -206,6 +206,8 @@ export default function Recipes() {
                     }`}>
                       {recipe.priorityScore >= 10 ? 'High Priority' : recipe.priorityScore >= 5 ? 'Medium Priority' : 'Low Priority'}
                     </span>
+                  ) : (
+                    <span className="w-0 h-0"></span>
                   )}
                 </div>
 
@@ -221,12 +223,14 @@ export default function Recipes() {
                 </div>
 
                 <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 min-h-[1.5rem]">
                     <span className="text-sm font-medium text-green-600 dark:text-green-400">
                       You have: {recipe.usedIngredientCount} ingredients
                     </span>
-                    {recipe.missedIngredientCount > 0 && (
+                    {recipe.missedIngredientCount > 0 ? (
                       <span className="text-sm text-orange-600 dark:text-orange-400">Need: {recipe.missedIngredientCount} more</span>
+                    ) : (
+                      <span className="text-sm text-transparent">Need: 0 more</span>
                     )}
                   </div>
 
@@ -240,8 +244,8 @@ export default function Recipes() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {recipe.usedIngredients.length > 0 && (
+                <div className="space-y-3 flex-1 mb-4">
+                  {recipe.usedIngredients.length > 0 ? (
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Ingredients you have:</h4>
                       <div className="flex flex-wrap gap-1">
@@ -274,9 +278,11 @@ export default function Recipes() {
                         })}
                       </div>
                     </div>
+                  ) : (
+                    <div className="min-h-[2.5rem]"></div>
                   )}
 
-                  {recipe.missedIngredients.length > 0 && (
+                  {recipe.missedIngredients.length > 0 ? (
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Missing ingredients:</h4>
                       <div className="flex flex-wrap gap-1">
@@ -290,10 +296,12 @@ export default function Recipes() {
                         ))}
                       </div>
                     </div>
+                  ) : (
+                    <div className="min-h-[2.5rem]"></div>
                   )}
                 </div>
 
-                <div className="mt-6 space-y-2">
+                <div className="mt-auto space-y-2 pt-4">
                   <button
                     onClick={() => setSelectedRecipe(recipe)}
                     className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"

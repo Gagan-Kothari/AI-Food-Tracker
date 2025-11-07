@@ -99,14 +99,14 @@ export default function Marketplace() {
 
   const getCouponColor = (name: string) => {
     const colors: { [key: string]: string } = {
-      blinkit: "bg-green-500",
-      zomato: "bg-red-500",
-      instamart: "bg-blue-500",
-      amazon: "bg-orange-500",
-      zepto: "bg-purple-500"
+      blinkit: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400",
+      zomato: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400",
+      instamart: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+      amazon: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
+      zepto: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400"
     }
     const key = name.toLowerCase()
-    return colors[key] || "bg-gray-500"
+    return colors[key] || "bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400"
   }
 
   if (loading) {
@@ -169,22 +169,22 @@ export default function Marketplace() {
           return (
             <div
               key={coupon.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 overflow-hidden transition-all ${
+              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border overflow-hidden transition-all ${
                 canAfford
-                  ? "border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg"
+                  ? "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md"
                   : "border-gray-200 dark:border-gray-700 opacity-60"
               }`}
             >
               {/* Coupon Header */}
-              <div className={`${getCouponColor(coupon.name.toLowerCase())} p-6 text-white`}>
+              <div className={`${getCouponColor(coupon.name.toLowerCase())} p-6 border-b border-gray-200 dark:border-gray-700`}>
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-4xl">{getCouponLogo(coupon.name)}</div>
+                  <div className="text-3xl">{getCouponLogo(coupon.name)}</div>
                   <div className="text-right">
-                    <p className="text-sm opacity-90">Points Required</p>
+                    <p className="text-sm opacity-80">Points Required</p>
                     <p className="text-2xl font-bold">{coupon.points_required}</p>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold">{coupon.name}</h3>
+                <h3 className="text-xl font-bold mt-2">{coupon.name}</h3>
               </div>
 
               {/* Coupon Body */}
