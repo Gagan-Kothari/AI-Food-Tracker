@@ -231,27 +231,52 @@ export default function Groceries() {
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{item.reason}</p>
                         
-                        {/* Grocery Store Links - Completely redesigned section */}
-                        <div className="mt-4 mb-4">
-                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                            <ShoppingCartIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                            <span>Buy from online stores:</span>
+                        {/* Grocery Store Links - EXTREMELY PROMINENT */}
+                        <div className="mt-6 mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border-4 border-yellow-400 dark:border-yellow-600 rounded-xl">
+                          <p className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <ShoppingCartIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            <span>🛒 Buy from online stores:</span>
                           </p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
-                              <button
-                                key={store}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleStoreClick(store, url, item.name)
-                                }}
-                                className="group relative flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white transition-all duration-200 shadow-md hover:shadow-xl transform hover:scale-105 active:scale-95 border-2 border-blue-400 dark:border-blue-500"
-                              >
-                                <span className="font-bold text-sm">{store.charAt(0).toUpperCase() + store.slice(1)}</span>
-                                <ArrowTopRightOnSquareIcon className="w-4 h-4 opacity-80 group-hover:opacity-100" />
-                              </button>
-                            ))}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => {
+                              console.log(`Rendering button for ${store}: ${url}`)
+                              return (
+                                <button
+                                  key={store}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    console.log(`CLICKED: ${store} for ${item.name}`)
+                                    handleStoreClick(store, url, item.name)
+                                  }}
+                                  style={{
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    padding: '12px 16px',
+                                    borderRadius: '12px',
+                                    border: '3px solid #1d4ed8',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    fontSize: '14px',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    minHeight: '80px',
+                                    justifyContent: 'center'
+                                  }}
+                                  className="hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all"
+                                  onMouseEnter={() => console.log(`Hovering over ${store}`)}
+                                >
+                                  <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                                    {store.charAt(0).toUpperCase() + store.slice(1)}
+                                  </span>
+                                  <ArrowTopRightOnSquareIcon className="w-5 h-5" style={{ color: 'white' }} />
+                                </button>
+                              )
+                            })}
                           </div>
                         </div>
                       </div>
