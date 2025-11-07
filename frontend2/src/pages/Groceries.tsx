@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
+import { useDarkMode } from "../contexts/DarkModeContext"
 import { apiService } from "../services/api"
 import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 
@@ -19,6 +20,7 @@ interface GroceryItem {
 
 export default function Groceries() {
   const { user } = useAuth()
+  const { darkMode } = useDarkMode()
   const [groceryList, setGroceryList] = useState<GroceryItem[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -189,15 +191,15 @@ export default function Groceries() {
       {/* Grocery Items by Category */}
       <div className="space-y-6">
         {Object.entries(groupedItems).map(([category, items]) => (
-          <div key={category} className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 px-6 py-3 border-b">
-              <h2 className="text-lg font-semibold text-gray-900">{category}</h2>
+          <div key={category} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b dark:border-gray-600">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{category}</h2>
             </div>
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-6 transition-colors ${selectedItems.has(item.id) ? "bg-blue-50" : "hover:bg-gray-50"}`}
+                  className={`p-6 transition-colors ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -212,32 +214,37 @@ export default function Groceries() {
 
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <h3 className="font-medium text-gray-900">{item.name}</h3>
+                          <h3 className="font-medium text-gray-900 dark:text-white">{item.name}</h3>
                           {item.suggested && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Suggested</span>
+                            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Suggested</span>
                           )}
                           <span className={`text-xs px-2 py-1 rounded-full ${getPriorityColor(item.priority)}`}>
                             {item.priority} priority
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{item.reason}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.reason}</p>
                         
-                        {/* Grocery Store Links */}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="text-xs text-gray-500 font-medium">Buy from:</span>
-                          {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
-                            <a
-                              key={store}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {store.charAt(0).toUpperCase() + store.slice(1)}
-                              <ArrowTopRightOnSquareIcon className="w-3 h-3" />
-                            </a>
-                          ))}
+                        {/* Grocery Store Links - Made more prominent */}
+                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-2.5">🛒 Buy from online stores:</p>
+                          <div className="flex flex-wrap gap-2.5">
+                            {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
+                              <a
+                                key={store}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-all duration-200 shadow-md hover:shadow-lg font-medium cursor-pointer transform hover:scale-105 active:scale-95"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  console.log(`Opening ${store} for ${item.name}`)
+                                }}
+                              >
+                                <span>{store.charAt(0).toUpperCase() + store.slice(1)}</span>
+                                <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                              </a>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
