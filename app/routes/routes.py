@@ -286,6 +286,8 @@ async def get_ngos_route(request: dict):
         ngos = get_ngos_by_city("default", limit=4)
     
     print(f"DEBUG: Returning {len(ngos)} NGOs")
+    print(f"DEBUG: NGO details: {[{'id': n.get('id'), 'name': n.get('name'), 'distance': n.get('distance_km')} for n in ngos]}")
+    print(f"DEBUG: Full NGO data: {ngos}")
     return {"ngos": ngos, "count": len(ngos)}
 
 

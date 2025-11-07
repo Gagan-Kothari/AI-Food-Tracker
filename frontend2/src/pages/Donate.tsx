@@ -63,12 +63,24 @@ export default function Donate() {
             console.log(`Location obtained: ${latitude}, ${longitude}`)
             try {
               const response = await apiService.getNGOs(latitude, longitude)
-              console.log("NGO API response:", response.data)
+              console.log("=== NGO API RESPONSE ===")
+              console.log("Full response:", JSON.stringify(response.data, null, 2))
+              console.log("Response data:", response.data)
+              console.log("NGOs array:", response.data?.ngos)
+              console.log("NGOs count:", response.data?.count)
+              
               if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
-                console.log(`Setting ${response.data.ngos.length} NGOs`)
+                console.log(`✅ Setting ${response.data.ngos.length} NGOs`)
+                console.log("NGOs details:", response.data.ngos.map(n => ({ id: n.id, name: n.name, distance: n.distance_km })))
                 setNGOs(response.data.ngos)
               } else {
-                console.warn("Invalid NGO response format:", response.data)
+                console.warn("❌ Invalid NGO response format:", response.data)
+                console.warn("Response structure:", {
+                  hasData: !!response.data,
+                  hasNGOs: !!response.data?.ngos,
+                  isArray: Array.isArray(response.data?.ngos),
+                  ngosValue: response.data?.ngos
+                })
                 // Fallback to static NGOs
                 await fetchNGOsByCity("default")
               }
@@ -107,15 +119,27 @@ export default function Donate() {
 
   const fetchNGOsByCity = async (city: string = "default") => {
     try {
-      console.log(`Fetching NGOs by city: ${city}`)
+      console.log(`=== Fetching NGOs by city: ${city} ===`)
       setLoadingNGOs(true)
       const response = await apiService.getNGOs(undefined, undefined, city)
-      console.log("NGO API response (city):", response.data)
+      console.log("=== NGO API RESPONSE (CITY) ===")
+      console.log("Full response:", JSON.stringify(response.data, null, 2))
+      console.log("Response data:", response.data)
+      console.log("NGOs array:", response.data?.ngos)
+      console.log("NGOs count:", response.data?.count)
+      
       if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
-        console.log(`Setting ${response.data.ngos.length} NGOs from city search`)
+        console.log(`✅ Setting ${response.data.ngos.length} NGOs from city search`)
+        console.log("NGOs details:", response.data.ngos.map(n => ({ id: n.id, name: n.name, distance: n.distance_km })))
         setNGOs(response.data.ngos)
       } else {
-        console.error("Invalid NGO response format:", response.data)
+        console.error("❌ Invalid NGO response format:", response.data)
+        console.error("Response structure:", {
+          hasData: !!response.data,
+          hasNGOs: !!response.data?.ngos,
+          isArray: Array.isArray(response.data?.ngos),
+          ngosValue: response.data?.ngos
+        })
         // Set empty array if response is invalid
         setNGOs([])
       }
@@ -342,10 +366,10 @@ export default function Donate() {
                 {!locationRequested && (
                   <button
                     onClick={requestLocationAndFetchNGOs}
-                    className="text-sm bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2"
+                    className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
                     title="Share your location to find nearby NGOs"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -414,6 +438,27 @@ export default function Donate() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Debug info - shows what NGOs were found */}
+                {ngos.length > 0 && (
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                      ✅ Found {ngos.length} NGO{ngos.length !== 1 ? 's' : ''}
+                    </p>
+                    <div className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                      {ngos.map((ngo, idx) => (
+                        <div key={ngo.id} className="font-mono">
+                          {idx + 1}. {ngo.name} {ngo.distance_km ? `(${ngo.distance_km} km)` : ''}
+                        </div>
+                      ))}
+                    </div>
+                    <details className="mt-2">
+                      <summary className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer">View full data</summary>
+                      <pre className="text-xs text-blue-700 dark:text-blue-400 overflow-auto max-h-40 mt-2 p-2 bg-blue-100 dark:bg-blue-900/40 rounded">
+                        {JSON.stringify(ngos, null, 2)}
+                      </pre>
+                    </details>
+                  </div>
+                )}
                 {ngos.map((ngo) => (
                   <div
                     key={ngo.id}
