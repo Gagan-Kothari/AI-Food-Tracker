@@ -338,32 +338,37 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 if is_matched:
                     matching_count += 1
                     used_ingredients.append({
-                        "id": len(used_ingredients) + 1,
-                        "name": recipe_ing,
+                        "id": int(len(used_ingredients) + 1),
+                        "name": str(recipe_ing),
                         "image": "",  # Indian recipes may not have images
                         "available": True
                     })
                 else:
                     missed_ingredients.append({
-                        "id": len(missed_ingredients) + 1,
-                        "name": recipe_ing,
+                        "id": int(len(missed_ingredients) + 1),
+                        "name": str(recipe_ing),
                         "image": "",
                         "available": False
                     })
             
             # Only include recipes with at least one matching ingredient
             if matching_count > 0:
+                # Convert numpy types to native Python types for JSON serialization
+                recipe_id = int(idx) + 100000  # Use high IDs to avoid conflicts with Spoonacular
+                prep_time = int(recipe.get('prep_time', 0)) if recipe.get('prep_time') is not None else 0
+                cook_time = int(recipe.get('cook_time', 0)) if recipe.get('cook_time') is not None else 0
+                
                 recipe_data = {
-                    "id": idx + 100000,  # Use high IDs to avoid conflicts with Spoonacular
-                    "title": recipe_name,
-                    "image": recipe.get('image', '') or "",
-                    "usedIngredientCount": matching_count,
-                    "missedIngredientCount": len(missed_ingredients),
+                    "id": recipe_id,
+                    "title": str(recipe_name),
+                    "image": str(recipe.get('image', '') or ""),
+                    "usedIngredientCount": int(matching_count),
+                    "missedIngredientCount": int(len(missed_ingredients)),
                     "usedIngredients": used_ingredients,
                     "missedIngredients": missed_ingredients,
                     "similarity_score": float(similarities[idx]),
-                    "prep_time": recipe.get('prep_time', 0),
-                    "cook_time": recipe.get('cook_time', 0),
+                    "prep_time": prep_time,
+                    "cook_time": cook_time,
                     "source": "indian"
                 }
                 

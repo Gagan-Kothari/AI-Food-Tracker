@@ -22,9 +22,19 @@ app.include_router(routes.router)
 # Note: When using allow_origins=["*"], allow_credentials must be False
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
 
+# Default origins including the Vercel frontend
+default_origins = [
+    "https://ai-food-tracker-eight.vercel.app",
+    "https://ai-food-tracker.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+]
+
 if ALLOWED_ORIGINS_ENV:
     # Use specific origins from environment variable
-    origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+    env_origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+    origins = list(set(default_origins + env_origins))  # Combine and remove duplicates
     allow_credentials = True
 else:
     # Default: Allow all origins (for deployment compatibility)
