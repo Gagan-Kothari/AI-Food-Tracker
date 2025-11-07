@@ -183,6 +183,7 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 def get_ngos_from_google_maps(latitude: float, longitude: float, limit: int = 4) -> Optional[List[Dict]]:
     """
     Get NGOs from Google Maps Places API near a given location.
+    Uses Text Search API for larger radius (200km) since Nearby Search is limited to 50km.
     
     Args:
         latitude: User's latitude
@@ -197,59 +198,125 @@ def get_ngos_from_google_maps(latitude: float, longitude: float, limit: int = 4)
         return None
     
     try:
-        # Search for NGOs, food banks, charities near the location
-        url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        params = {
+        # First try Nearby Search (up to 50km) for more accurate results
+        url_nearby = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        params_nearby = {
             "location": f"{latitude},{longitude}",
-            "radius": 10000,  # 10km radius
+            "radius": 50000,  # 50km radius (maximum for Nearby Search)
             "type": "establishment",
             "keyword": "NGO food bank charity donation",
             "key": GOOGLE_MAPS_API_KEY
         }
         
-        response = requests.get(url, params=params, timeout=10)
+        print(f"DEBUG: Searching for NGOs within 50km of ({latitude}, {longitude})")
+        response_nearby = requests.get(url_nearby, params=params_nearby, timeout=10)
         
-        if response.status_code == 200:
-            data = response.json()
+        ngos = []
+        
+        if response_nearby.status_code == 200:
+            data_nearby = response_nearby.json()
             
-            if data.get("status") == "OK" and data.get("results"):
-                ngos = []
-                for place in data.get("results", [])[:limit]:
-                    # Get place details for more information
+            if data_nearby.get("status") == "OK" and data_nearby.get("results"):
+                print(f"DEBUG: Found {len(data_nearby.get('results', []))} results from Nearby Search")
+                for place in data_nearby.get("results", []):
                     place_id = place.get("place_id")
                     details = get_place_details(place_id) if place_id else {}
                     
-                    # Calculate distance
                     place_lat = place.get("geometry", {}).get("location", {}).get("lat", latitude)
                     place_lng = place.get("geometry", {}).get("location", {}).get("lng", longitude)
                     distance = calculate_distance(latitude, longitude, place_lat, place_lng)
                     
-                    ngo = {
-                        "id": place_id or len(ngos) + 1,
-                        "name": place.get("name", "Unknown NGO"),
-                        "address": place.get("vicinity") or details.get("formatted_address", "Address not available"),
-                        "contact": details.get("formatted_phone_number") or details.get("international_phone_number", "Contact not available"),
-                        "description": f"Located near you. {details.get('editorial_summary', {}).get('overview', 'Helping the community with food donations.')}",
-                        "latitude": place_lat,
-                        "longitude": place_lng,
-                        "distance_km": round(distance, 2),
-                        "rating": place.get("rating"),
-                        "place_id": place_id
-                    }
-                    ngos.append(ngo)
+                    # Only include if within 200km
+                    if distance <= 200:
+                        ngo = {
+                            "id": place_id or len(ngos) + 1,
+                            "name": place.get("name", "Unknown NGO"),
+                            "address": place.get("vicinity") or details.get("formatted_address", "Address not available"),
+                            "contact": details.get("formatted_phone_number") or details.get("international_phone_number", "Contact not available"),
+                            "description": f"Located near you. {details.get('editorial_summary', {}).get('overview', 'Helping the community with food donations.')}",
+                            "latitude": place_lat,
+                            "longitude": place_lng,
+                            "distance_km": round(distance, 2),
+                            "rating": place.get("rating"),
+                            "place_id": place_id
+                        }
+                        ngos.append(ngo)
+        
+        # If we don't have enough results, use Text Search for larger area (up to 200km)
+        if len(ngos) < limit:
+            print(f"DEBUG: Only found {len(ngos)} NGOs nearby, expanding search to 200km using Text Search")
+            
+            # Use Text Search API for broader search
+            url_text = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+            # Search terms for NGOs, food banks, charities
+            search_queries = [
+                "NGO food bank",
+                "charity organization",
+                "food donation center",
+                "non-profit organization"
+            ]
+            
+            for query in search_queries:
+                if len(ngos) >= limit * 2:  # Get more than needed to filter by distance
+                    break
+                    
+                params_text = {
+                    "query": query,
+                    "location": f"{latitude},{longitude}",
+                    "radius": 200000,  # 200km in meters
+                    "key": GOOGLE_MAPS_API_KEY
+                }
                 
-                # Sort by distance
-                ngos.sort(key=lambda x: x["distance_km"])
-                return ngos
-            else:
-                print(f"DEBUG: Google Maps API returned status: {data.get('status')}")
-                return None
+                try:
+                    response_text = requests.get(url_text, params=params_text, timeout=10)
+                    if response_text.status_code == 200:
+                        data_text = response_text.json()
+                        if data_text.get("status") == "OK" and data_text.get("results"):
+                            print(f"DEBUG: Found {len(data_text.get('results', []))} results for query: {query}")
+                            for place in data_text.get("results", []):
+                                place_id = place.get("place_id")
+                                
+                                # Skip if we already have this place
+                                if any(n.get("place_id") == place_id for n in ngos):
+                                    continue
+                                
+                                place_lat = place.get("geometry", {}).get("location", {}).get("lat", latitude)
+                                place_lng = place.get("geometry", {}).get("location", {}).get("lng", longitude)
+                                distance = calculate_distance(latitude, longitude, place_lat, place_lng)
+                                
+                                # Only include if within 200km
+                                if distance <= 200:
+                                    details = get_place_details(place_id) if place_id else {}
+                                    ngo = {
+                                        "id": place_id or len(ngos) + 1,
+                                        "name": place.get("name", "Unknown NGO"),
+                                        "address": place.get("formatted_address") or details.get("formatted_address", "Address not available"),
+                                        "contact": details.get("formatted_phone_number") or details.get("international_phone_number", "Contact not available"),
+                                        "description": f"Located near you. {details.get('editorial_summary', {}).get('overview', 'Helping the community with food donations.')}",
+                                        "latitude": place_lat,
+                                        "longitude": place_lng,
+                                        "distance_km": round(distance, 2),
+                                        "rating": place.get("rating"),
+                                        "place_id": place_id
+                                    }
+                                    ngos.append(ngo)
+                except Exception as e:
+                    print(f"DEBUG: Error in Text Search for '{query}': {str(e)}")
+                    continue
+        
+        if ngos:
+            # Sort by distance and return top N
+            ngos.sort(key=lambda x: x["distance_km"])
+            print(f"DEBUG: Returning {min(len(ngos), limit)} NGOs (found {len(ngos)} total within 200km)")
+            return ngos[:limit]
         else:
-            print(f"DEBUG: Google Maps API request failed with status {response.status_code}")
+            print(f"DEBUG: No NGOs found within 200km")
             return None
             
     except Exception as e:
         print(f"DEBUG: Error calling Google Maps API: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
