@@ -42,10 +42,12 @@ export default function Groceries() {
       if (response.data && response.data.suggestions) {
         setGroceryList(response.data.suggestions)
       } else {
+        // Fallback to empty list if no suggestions
         setGroceryList([])
       }
     } catch (error) {
       console.error("Error generating grocery suggestions:", error)
+      // Fallback to empty list on error
       setGroceryList([])
     } finally {
       setLoading(false)
@@ -91,13 +93,13 @@ export default function Groceries() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30"
+        return "text-red-600 bg-red-100"
       case "medium":
-        return "text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/30"
+        return "text-yellow-600 bg-yellow-100"
       case "low":
-        return "text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30"
+        return "text-green-600 bg-green-100"
       default:
-        return "text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-800"
+        return "text-gray-600 bg-gray-100"
     }
   }
 
@@ -109,11 +111,6 @@ export default function Groceries() {
       flipkart: `https://www.flipkart.com/grocery/search?q=${encodedName}`,
       amazon: `https://www.amazon.in/s?k=${encodedName}&i=grocery`
     }
-  }
-
-  const handleStoreClick = (store: string, url: string, itemName: string) => {
-    console.log(`Opening ${store} for ${itemName}: ${url}`)
-    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const groupedItems = groceryList.reduce(
@@ -131,10 +128,10 @@ export default function Groceries() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
           <div className="space-y-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-gray-200 dark:bg-gray-700 h-20 rounded-lg"></div>
+              <div key={i} className="bg-gray-200 h-20 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -146,15 +143,15 @@ export default function Groceries() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <ShoppingCartIcon className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No grocery suggestions available</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+          <ShoppingCartIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">No grocery suggestions available</h2>
+          <p className="text-gray-600 mb-4">
             We need more consumption data to provide personalized grocery suggestions. 
             Start by consuming items from your inventory!
           </p>
           <button
             onClick={generateGrocerySuggestions}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Refresh Suggestions
           </button>
@@ -166,16 +163,16 @@ export default function Groceries() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Grocery Suggestions</h1>
-        <p className="text-gray-600 dark:text-gray-400">Smart recommendations based on your consumption patterns and inventory</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Grocery Suggestions</h1>
+        <p className="text-gray-600">Smart recommendations based on your consumption patterns and inventory</p>
       </div>
 
       {/* Action Buttons */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex flex-wrap gap-4">
           <button
             onClick={selectAllSuggested}
-            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
           >
             <CheckIcon className="w-4 h-4 mr-2" />
             Select All Suggested
@@ -183,7 +180,7 @@ export default function Groceries() {
           <button
             onClick={downloadList}
             disabled={selectedItems.size === 0}
-            className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 disabled:bg-gray-400 dark:disabled:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
           >
             <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
             Download List ({selectedItems.size})
@@ -202,26 +199,28 @@ export default function Groceries() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-6 transition-colors ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  className={`p-6 transition-colors relative ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  onClick={(e) => {
+                    // Only toggle selection if clicking on the item itself, not on links
+                    if ((e.target as HTMLElement).closest('a') === null) {
+                      // Allow default behavior for non-link clicks
+                    }
+                  }}
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Left Section: Checkbox and Item Info */}
-                    <div className="flex items-start space-x-4 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleItemSelection(item.id)
-                        }}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                          selectedItems.has(item.id) ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
+                        onClick={() => toggleItemSelection(item.id)}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          selectedItems.has(item.id) ? "border-blue-500 bg-blue-500" : "border-gray-300"
                         }`}
                       >
                         {selectedItems.has(item.id) && <CheckIcon className="w-3 h-3 text-white" />}
                       </button>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-medium text-gray-900 dark:text-white text-lg">{item.name}</h3>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white">{item.name}</h3>
                           {item.suggested && (
                             <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded-full">Suggested</span>
                           )}
@@ -229,57 +228,55 @@ export default function Groceries() {
                             {item.priority} priority
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{item.reason}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.reason}</p>
                         
-                        {/* Grocery Store Links - Completely redesigned section */}
-                        <div className="mt-4 mb-4">
-                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                            <ShoppingCartIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        {/* Grocery Store Links - Made more prominent and clickable */}
+                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-700 relative z-10">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 font-bold mb-3 flex items-center gap-2">
+                            <span className="text-lg">🛒</span>
                             <span>Buy from online stores:</span>
                           </p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="flex flex-wrap gap-3">
                             {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
-                              <button
+                              <a
                                 key={store}
-                                type="button"
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 text-base px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-all duration-200 shadow-lg hover:shadow-xl font-semibold cursor-pointer transform hover:scale-110 active:scale-95 no-underline relative z-20"
+                                style={{ pointerEvents: 'auto' }}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleStoreClick(store, url, item.name)
+                                  e.preventDefault()
+                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                  console.log(`Opening ${store} for ${item.name}: ${url}`)
                                 }}
-                                className="group relative flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 text-white transition-all duration-200 shadow-md hover:shadow-xl transform hover:scale-105 active:scale-95 border-2 border-blue-400 dark:border-blue-500"
                               >
-                                <span className="font-bold text-sm">{store.charAt(0).toUpperCase() + store.slice(1)}</span>
-                                <ArrowTopRightOnSquareIcon className="w-4 h-4 opacity-80 group-hover:opacity-100" />
-                              </button>
+                                <span className="font-bold">{store.charAt(0).toUpperCase() + store.slice(1)}</span>
+                                <ArrowTopRightOnSquareIcon className="w-5 h-5" />
+                              </a>
                             ))}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right Section: Quantity Controls */}
-                    <div className="flex items-center space-x-4 flex-shrink-0 lg:ml-4">
-                      <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            updateQuantity(item.id, -1)
-                          }}
-                          className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
                         >
-                          <MinusIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                          <MinusIcon className="w-4 h-4" />
                         </button>
-                        <span className="w-16 text-center font-medium text-gray-900 dark:text-white">
+                        <span className="w-16 text-center">
                           {item.quantity} {item.unit}
                         </span>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            updateQuantity(item.id, 1)
-                          }}
-                          className="w-8 h-8 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
                         >
-                          <PlusIcon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                          <PlusIcon className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -293,15 +290,15 @@ export default function Groceries() {
 
       {/* Summary */}
       {selectedItems.size > 0 && (
-        <div className="fixed bottom-6 right-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 p-4 max-w-sm z-50">
+        <div className="fixed bottom-6 right-6 bg-white rounded-lg shadow-lg border p-4 max-w-sm">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Shopping List</h3>
-            <ShoppingCartIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <h3 className="font-semibold text-gray-900">Shopping List</h3>
+            <ShoppingCartIcon className="w-5 h-5 text-gray-600" />
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{selectedItems.size} items selected</p>
+          <p className="text-sm text-gray-600 mb-3">{selectedItems.size} items selected</p>
           <button
             onClick={downloadList}
-            className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
           >
             Download List
           </button>
@@ -310,3 +307,4 @@ export default function Groceries() {
     </div>
   )
 }
+
