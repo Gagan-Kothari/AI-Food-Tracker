@@ -503,7 +503,24 @@ def mark_recipe_as_cooked(db: Session, user_id: int, recipe_id: int, recipe_titl
                     db.add(food_status_log)
                     consumed_count += 1
         
-        if consumed_count > 0:
+        # Track recipe as tried (only once per recipe per user)
+        existing_recipe = db.query(models.RecipesTried).filter(
+            models.RecipesTried.user_id == user_id,
+            models.RecipesTried.recipe_id == recipe_id
+        ).first()
+        
+        recipe_added = False
+        if not existing_recipe:
+            recipe_tried = models.RecipesTried(
+                user_id=user_id,
+                recipe_id=recipe_id,
+                recipe_title=recipe_title,
+                timestamp=datetime.now()
+            )
+            db.add(recipe_tried)
+            recipe_added = True
+        
+        if consumed_count > 0 or recipe_added:
             db.commit()
         
         # Send WhatsApp notification

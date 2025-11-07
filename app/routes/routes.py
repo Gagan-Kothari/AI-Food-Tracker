@@ -234,6 +234,12 @@ async def mark_recipe_cooked_route(request: dict, db: Session = Depends(get_db))
     
     return mark_recipe_as_cooked(db, int(user_id), int(recipe_id), recipe_title, used_ingredients)
 
+@router.get("/user/dashboard-stats/{user_id}")
+async def get_dashboard_stats_route(user_id: int, db: Session = Depends(get_db)):
+    """Get dashboard statistics for a user"""
+    from app.crud.dashboard_crud import get_dashboard_stats
+    return get_dashboard_stats(db, user_id)
+
 @router.post("/user/grocery-suggestions")
 async def get_grocery_suggestions_route(request: UserIdRequest):
     """Get AI-powered grocery suggestions for a user based on consumption patterns"""

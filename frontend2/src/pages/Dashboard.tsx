@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
+import { apiService } from "../services/api"
 import {
   CameraIcon,
   CubeIcon,
@@ -13,6 +15,12 @@ import {
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const [stats, setStats] = useState({
+    items_donated: 0,
+    recipes_tried: 0,
+    items_scanned: 0,
+  })
+  const [loading, setLoading] = useState(true)
 
   const featureCards = [
     {
@@ -57,7 +65,31 @@ export default function Dashboard() {
     },
   ]
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.userid) {
+        setLoading(false)
+        return
+      }
 
+      try {
+        const response = await apiService.getDashboardStats(user.userid)
+        if (response.data.status) {
+          setStats({
+            items_donated: response.data.items_donated || 0,
+            recipes_tried: response.data.recipes_tried || 0,
+            items_scanned: response.data.items_scanned || 0,
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [user?.userid])
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -93,18 +125,18 @@ export default function Dashboard() {
       {/* Quick Stats */}
       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-r from-green-400 to-green-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">Items Saved</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="text-green-100 text-sm">Items prevented from waste</p>
+          <h3 className="text-lg font-semibold mb-2">Items Donated</h3>
+          <p className="text-3xl font-bold">{loading ? "..." : stats.items_donated}</p>
+          <p className="text-green-100 text-sm">Items donated to NGOs</p>
         </div>
         <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-2">Money Saved</h3>
-          <p className="text-3xl font-bold">$0</p>
-          <p className="text-blue-100 text-sm">Estimated savings this month</p>
+          <h3 className="text-lg font-semibold mb-2">Items Scanned</h3>
+          <p className="text-3xl font-bold">{loading ? "..." : stats.items_scanned}</p>
+          <p className="text-blue-100 text-sm">Total items in your inventory</p>
         </div>
         <div className="bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl p-6 text-white">
           <h3 className="text-lg font-semibold mb-2">Recipes Tried</h3>
-          <p className="text-3xl font-bold">0</p>
+          <p className="text-3xl font-bold">{loading ? "..." : stats.recipes_tried}</p>
           <p className="text-purple-100 text-sm">AI-suggested recipes used</p>
         </div>
       </div>

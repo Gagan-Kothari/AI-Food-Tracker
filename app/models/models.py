@@ -53,3 +53,14 @@ class FoodStatusLog(Base):
 
     inventory = relationship("Inventory")
 
+
+class RecipesTried(Base):
+    __tablename__ = "recipes_tried"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    recipe_id = Column(Integer)  # Spoonacular recipe ID
+    recipe_title = Column(String)
+    timestamp = Column(DateTime)
+
+    user = relationship("Users")

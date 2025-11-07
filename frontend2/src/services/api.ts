@@ -82,4 +82,7 @@ export const apiService = {
   // Expiry alerts
   sendExpiryAlerts: (userid: string) => api.post("/user/send-expiry-alerts", { userid }),
   adminSendExpiryAlerts: (adminUserid: number) => api.post("/admin/send-expiry-alerts", { userid: adminUserid }),
+
+  // Dashboard stats
+  getDashboardStats: (userid: string) => api.get(`/user/dashboard-stats/${userid}`),
 }
