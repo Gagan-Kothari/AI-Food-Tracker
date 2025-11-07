@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { useDarkMode } from "../contexts/DarkModeContext"
 import { apiService } from "../services/api"
 import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 
@@ -20,7 +19,6 @@ interface GroceryItem {
 
 export default function Groceries() {
   const { user } = useAuth()
-  const { darkMode } = useDarkMode()
   const [groceryList, setGroceryList] = useState<GroceryItem[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)

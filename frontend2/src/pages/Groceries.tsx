@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { useDarkMode } from "../contexts/DarkModeContext"
 import { apiService } from "../services/api"
 import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 
@@ -20,7 +19,6 @@ interface GroceryItem {
 
 export default function Groceries() {
   const { user } = useAuth()
-  const { darkMode } = useDarkMode()
   const [groceryList, setGroceryList] = useState<GroceryItem[]>([])
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -109,11 +107,6 @@ export default function Groceries() {
       flipkart: `https://www.flipkart.com/grocery/search?q=${encodedName}`,
       amazon: `https://www.amazon.in/s?k=${encodedName}&i=grocery`
     }
-  }
-
-  const handleStoreClick = (store: string, url: string, itemName: string) => {
-    console.log(`Opening ${store} for ${itemName}: ${url}`)
-    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const groupedItems = groceryList.reduce(
