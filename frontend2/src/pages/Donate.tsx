@@ -39,7 +39,6 @@ export default function Donate() {
   const [error, setError] = useState<string | null>(null)
   const [ngos, setNGOs] = useState<NGO[]>([])
   const [loadingNGOs, setLoadingNGOs] = useState(false)
-  const [selectedCity, setSelectedCity] = useState<string>("")
   const [locationDenied, setLocationDenied] = useState(false)
   const [locationRequested, setLocationRequested] = useState(false)
   const [searchingLocation, setSearchingLocation] = useState<string>("")
@@ -386,31 +385,13 @@ export default function Donate() {
                   </button>
                 )}
                 {locationRequested && (
-                  <>
-                    <select
-                      value={selectedCity}
-                      onChange={(e) => {
-                        const city = e.target.value
-                        setSelectedCity(city)
-                        if (city) {
-                          fetchNGOsByCity(city)
-                        }
-                      }}
-                      className="text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select City</option>
-                      <option value="mumbai">Mumbai</option>
-                      <option value="delhi">Delhi</option>
-                      <option value="bangalore">Bangalore</option>
-                    </select>
-                    <button
-                      onClick={requestLocationAndFetchNGOs}
-                      className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-1"
-                      title="Refresh NGOs using your location"
-                    >
-                      🔄
-                    </button>
-                  </>
+                  <button
+                    onClick={requestLocationAndFetchNGOs}
+                    className="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    title="Refresh NGOs using your location"
+                  >
+                    🔄 Refresh
+                  </button>
                 )}
               </div>
             </div>
@@ -469,12 +450,6 @@ export default function Donate() {
                         </div>
                       ))}
                     </div>
-                    <details className="mt-2">
-                      <summary className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer">View full data</summary>
-                      <pre className="text-xs text-blue-700 dark:text-blue-400 overflow-auto max-h-40 mt-2 p-2 bg-blue-100 dark:bg-blue-900/40 rounded">
-                        {JSON.stringify(ngos, null, 2)}
-                      </pre>
-                    </details>
                   </div>
                 )}
                 {ngos.map((ngo) => (
