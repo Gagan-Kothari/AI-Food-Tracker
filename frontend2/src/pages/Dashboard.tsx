@@ -11,7 +11,6 @@ import {
   BookOpenIcon,
   ShoppingCartIcon,
   ShoppingBagIcon,
-  SparklesIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline"
 
@@ -22,7 +21,6 @@ export default function Dashboard() {
     recipes_tried: 0,
     items_scanned: 0,
   })
-  const [userPoints, setUserPoints] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const featureCards = [
@@ -31,7 +29,7 @@ export default function Dashboard() {
       description: "Add items to your inventory by scanning barcodes",
       icon: CameraIcon,
       path: "/scan",
-      color: "bg-blue-500",
+      color: "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
       emoji: "📷",
     },
     {
@@ -39,7 +37,7 @@ export default function Dashboard() {
       description: "View and manage all your food items",
       icon: CubeIcon,
       path: "/inventory",
-      color: "bg-green-500",
+      color: "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400",
       emoji: "📦",
     },
     {
@@ -47,7 +45,7 @@ export default function Dashboard() {
       description: "Donate expiring items to local NGOs",
       icon: HeartIcon,
       path: "/donate",
-      color: "bg-red-500",
+      color: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400",
       emoji: "❤️",
     },
     {
@@ -55,7 +53,7 @@ export default function Dashboard() {
       description: "Get AI-powered recipe suggestions",
       icon: BookOpenIcon,
       path: "/recipes",
-      color: "bg-purple-500",
+      color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
       emoji: "🍳",
     },
     {
@@ -63,7 +61,7 @@ export default function Dashboard() {
       description: "Smart recommendations for your next shopping",
       icon: ShoppingCartIcon,
       path: "/groceries",
-      color: "bg-orange-500",
+      color: "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
       emoji: "🛒",
     },
     {
@@ -71,7 +69,7 @@ export default function Dashboard() {
       description: "Redeem your points for exclusive coupons",
       icon: ShoppingBagIcon,
       path: "/marketplace",
-      color: "bg-indigo-500",
+      color: "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400",
       emoji: "🎁",
     },
   ]
@@ -94,11 +92,6 @@ export default function Dashboard() {
           })
         }
 
-        // Fetch user points
-        const pointsResponse = await apiService.getUserPoints(user.userid)
-        if (pointsResponse.data.status) {
-          setUserPoints(pointsResponse.data.points || 0)
-        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
       } finally {
@@ -133,66 +126,49 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Welcome back, {user?.username}! 👋
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Manage your food inventory and reduce waste with smart tracking.
-            </p>
-          </div>
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-6 py-4">
-            <div className="flex items-center gap-2">
-              <SparklesIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Your Points</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{userPoints}</p>
-              </div>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Welcome back, {user?.username}! 👋
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage your food inventory and reduce waste with smart tracking.
+          </p>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-4xl">❤️</div>
-              <div className="text-right">
-                <p className="text-sm opacity-90">Items Donated</p>
-                <p className="text-3xl font-bold">{stats.items_donated}</p>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all hover:shadow-md h-full flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-2xl">❤️</div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Items Donated</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.items_donated}</p>
             </div>
-            <p className="text-green-100 text-sm">Items donated to NGOs</p>
           </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-auto">Items donated to NGOs</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-lg">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-4xl">📱</div>
-              <div className="text-right">
-                <p className="text-sm opacity-90">Items Scanned</p>
-                <p className="text-3xl font-bold">{stats.items_scanned}</p>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all hover:shadow-md h-full flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-2xl">📱</div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Items Scanned</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.items_scanned}</p>
             </div>
-            <p className="text-blue-100 text-sm">Total items in your inventory</p>
           </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-auto">Total items in your inventory</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-purple-500 dark:hover:border-purple-500 hover:shadow-lg">
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-4xl">🍳</div>
-              <div className="text-right">
-                <p className="text-sm opacity-90">Recipes Tried</p>
-                <p className="text-3xl font-bold">{stats.recipes_tried}</p>
-              </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all hover:shadow-md h-full flex flex-col">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-2xl">🍳</div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Recipes Tried</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.recipes_tried}</p>
             </div>
-            <p className="text-purple-100 text-sm">AI-suggested recipes used</p>
           </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-auto">AI-suggested recipes used</p>
         </div>
       </div>
 
@@ -203,23 +179,23 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {featureCards.map((card) => {
           return (
-            <Link key={card.title} to={card.path} className="group block">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg">
+            <Link key={card.title} to={card.path} className="group block h-full">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
                 {/* Card Header */}
-                <div className={`${card.color} p-6 text-white`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-4xl">{card.emoji}</div>
-                    <ArrowRightIcon className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={`${card.color} p-4 border-b border-gray-200 dark:border-gray-700`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl">{card.emoji}</div>
+                    <ArrowRightIcon className={`w-4 h-4 ${card.color.split(' ')[2]} opacity-0 group-hover:opacity-100 transition-opacity`} />
                   </div>
-                  <h3 className="text-xl font-bold">{card.title}</h3>
+                  <h3 className="text-lg font-semibold mt-2">{card.title}</h3>
                 </div>
 
                 {/* Card Body */}
-                <div className="p-6">
-                  <p className="text-gray-700 dark:text-gray-300">{card.description}</p>
-                  <div className="mt-4 flex items-center text-sm font-medium text-green-600 dark:text-green-400 group-hover:underline">
+                <div className="p-4 flex-1 flex flex-col">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 flex-1">{card.description}</p>
+                  <div className="flex items-center text-xs font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
                     Get started
-                    <ArrowRightIcon className="w-4 h-4 ml-1" />
+                    <ArrowRightIcon className="w-3 h-3 ml-1" />
                   </div>
                 </div>
               </div>
