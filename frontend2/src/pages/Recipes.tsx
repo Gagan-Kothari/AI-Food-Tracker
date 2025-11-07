@@ -238,19 +238,34 @@ export default function Recipes() {
               key={recipe.id}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col h-full"
             >
-              <img 
-                src={recipe.image || "/placeholder.svg"} 
-                alt={recipe.title} 
-                className="w-full h-48 object-cover flex-shrink-0" 
-                onError={(e) => {
-                  console.error(`Failed to load image for ${recipe.title}:`, recipe.image)
-                  // Fallback to placeholder on error
-                  e.currentTarget.src = "/placeholder.svg"
-                }}
-                onLoad={() => {
-                  console.log(`Successfully loaded image for ${recipe.title}:`, recipe.image)
-                }}
-              />
+              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                <img 
+                  src={recipe.image && recipe.image.startsWith('http') ? recipe.image : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"} 
+                  alt={recipe.title} 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => {
+                    console.error(`Failed to load image for ${recipe.title}:`, recipe.image)
+                    // Fallback to Unsplash food placeholder (always works)
+                    const target = e.currentTarget
+                    if (!target.src.includes('unsplash.com')) {
+                      target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"
+                    } else {
+                      // Final fallback - show a simple colored div with text
+                      target.style.display = 'none'
+                      const parent = target.parentElement
+                      if (parent && !parent.querySelector('.placeholder-text')) {
+                        const placeholder = document.createElement('div')
+                        placeholder.className = 'placeholder-text w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500'
+                        placeholder.textContent = '🍳 Recipe Image'
+                        parent.appendChild(placeholder)
+                      }
+                    }
+                  }}
+                  onLoad={() => {
+                    console.log(`Successfully loaded image for ${recipe.title}:`, recipe.image)
+                  }}
+                />
+              </div>
               <div className="p-6 flex flex-col flex-1">
                 <div className="flex items-start justify-between mb-2 min-h-[3rem]">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 pr-2">{recipe.title}</h3>

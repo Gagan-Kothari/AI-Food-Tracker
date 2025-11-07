@@ -779,6 +779,41 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                             len(img_str) > 10 and
                             img_str.lower() not in ['nan', 'none', '', 'null'] and
                             (img_str.startswith('http://') or img_str.startswith('https://'))):
+                            
+                            # Transform Archana's Kitchen URLs to use Next.js image optimization
+                            # Old format: https://www.archanaskitchen.com/images/archanaskitchen/...
+                            # New format: https://www.archanaskitchen.com/_next/image?url=ENCODED_URL&w=1920&q=90
+                            if 'archanaskitchen.com' in img_str and '/_next/image' not in img_str:
+                                # Try to convert old URL format to new format
+                                # Old URLs have structure: www.archanaskitchen.com/images/archanaskitchen/...
+                                # New URLs need: images.archanaskitchen.com/images/recipes/...
+                                
+                                # Extract filename from old URL
+                                filename = img_str.split('/')[-1]
+                                # Clean filename (remove extension for now, we'll add it back)
+                                base_filename = filename.rsplit('.', 1)[0] if '.' in filename else filename
+                                
+                                # Try to construct new image URL
+                                # Pattern: https://images.archanaskitchen.com/images/recipes/indian/[category]/[filename]
+                                # Since we don't know the exact category, try the old path first
+                                if '/images/archanaskitchen.com/' in img_str:
+                                    # Already in new format structure
+                                    actual_image_url = img_str.split('/images/archanaskitchen.com/')[-1]
+                                    actual_image_url = f"https://images.archanaskitchen.com/{actual_image_url}"
+                                elif '/images/archanaskitchen/' in img_str:
+                                    # Old format: convert www.archanaskitchen.com/images to images.archanaskitchen.com/images
+                                    # Replace www.archanaskitchen.com with images.archanaskitchen.com
+                                    actual_image_url = img_str.replace('www.archanaskitchen.com', 'images.archanaskitchen.com')
+                                else:
+                                    # Keep as is if it's already a valid URL
+                                    actual_image_url = img_str
+                                
+                                # Encode the URL for Next.js image optimization
+                                from urllib.parse import quote
+                                encoded_url = quote(actual_image_url, safe='')
+                                # Use Next.js image optimization with proper dimensions
+                                img_str = f"https://www.archanaskitchen.com/_next/image?url={encoded_url}&w=1920&q=90"
+                            
                             recipe_image_map[recipe_name_csv] = img_str
                 
                 print(f"DEBUG: Created image map with {len(recipe_image_map)} recipes")
