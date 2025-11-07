@@ -612,46 +612,9 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 continue
             seen_names.add(recipe_name)
             
-            # Extract image URL directly from dataframe row
+            # Image will be extracted from CSV later for matched recipes only
+            # Skip image extraction here - we'll do it from CSV after matching
             recipe_image = ""
-            try:
-                # Direct access from dataframe - this is the most reliable method
-                if 'image_url' in df.columns:
-                    img_val = row['image_url']
-                    # Convert to string, handling all possible types
-                    if img_val is not None:
-                        # Handle numpy/pandas types
-                        if hasattr(img_val, 'item'):  # numpy scalar
-                            img_val = img_val.item()
-                        elif hasattr(img_val, 'values'):  # pandas Series
-                            img_val = img_val.values[0] if len(img_val.values) > 0 else None
-                        
-                        if img_val is not None:
-                            img_str = str(img_val).strip()
-                            # Validate it's a real URL
-                            if (img_str and 
-                                len(img_str) > 10 and  # Must be a reasonable URL length
-                                img_str.lower() not in ['nan', 'none', '', 'null', 'none', 'na'] and
-                                (img_str.startswith('http://') or img_str.startswith('https://'))):
-                                recipe_image = img_str
-                                print(f"DEBUG: ✓ Image extracted for '{recipe_name[:40]}...': {recipe_image[:80]}...")
-                
-                # Fallback: try from dict
-                if not recipe_image and 'image_url' in recipe:
-                    img_val = recipe.get('image_url', '')
-                    if img_val:
-                        img_str = str(img_val).strip()
-                        if (len(img_str) > 10 and 
-                            img_str.lower() not in ['nan', 'none', '', 'null'] and
-                            (img_str.startswith('http://') or img_str.startswith('https://'))):
-                            recipe_image = img_str
-                            print(f"DEBUG: ✓ Image from dict for '{recipe_name[:40]}...': {recipe_image[:80]}...")
-                
-                if not recipe_image:
-                    print(f"DEBUG: ✗ No valid image URL for '{recipe_name[:40]}...'")
-            except Exception as e:
-                print(f"DEBUG: ✗ Error extracting image: {str(e)}")
-                # Don't fail the whole recipe if image extraction fails
             
             # Extract ingredients list
             recipe_ingredients_str = recipe.get('ingredients', '')
@@ -709,28 +672,11 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 prep_time = safe_int_parse(recipe.get('prep_time'), default=0)
                 cook_time = safe_int_parse(recipe.get('cook_time'), default=0)
                 
-                # recipe_image was already extracted above from the dataframe
-                # If it's still empty, try one more time from the dict
-                if not recipe_image:
-                    for img_col in ['image_url', 'imageurl', 'image', 'image_urls', 'photo', 'photo_url']:
-                        img_val = recipe.get(img_col, '')
-                        if img_val and pd.notna(img_val):
-                            img_str = str(img_val).strip()
-                            if img_str and img_str.lower() != 'nan' and (img_str.startswith('http://') or img_str.startswith('https://')):
-                                recipe_image = img_str
-                                break
-                
-                # Final check: ensure image is a valid string (not None, not empty)
-                if not recipe_image or recipe_image == "":
-                    recipe_image = ""  # Explicitly set to empty string
-                    print(f"DEBUG: ⚠ No image for recipe '{recipe_name[:40]}...'")
-                else:
-                    print(f"DEBUG: ✓ Final image URL for '{recipe_name[:40]}...': {recipe_image[:80]}...")
-                
+                # Image will be extracted from CSV later - set empty for now
                 recipe_data = {
                     "id": recipe_id,
                     "title": str(recipe_name),
-                    "image": str(recipe_image) if recipe_image else "",  # Ensure it's always a string
+                    "image": "",  # Will be populated from CSV later
                     "usedIngredientCount": int(matching_count),
                     "missedIngredientCount": int(len(missed_ingredients)),
                     "usedIngredients": used_ingredients,
@@ -741,12 +687,6 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                     "source": "indian",
                     "measurements": recipe_measurements  # Add measurements for recipe display
                 }
-                
-                # Debug: verify image is in the response
-                if recipe_data.get("image"):
-                    print(f"DEBUG: ✓✓ Image confirmed in recipe_data for '{recipe_name[:40]}...'")
-                else:
-                    print(f"DEBUG: ⚠⚠ Image MISSING in recipe_data for '{recipe_name[:40]}...'")
                 
                 # Prioritize recipes with expiry ingredients
                 if expiry_ingredients:
@@ -773,6 +713,59 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
         
         # Return top N recipes
         top_recipes = matching_recipes[:number]
+        
+        # Extract images from CSV for the matched recipes
+        csv_df = None
+        try:
+            # Try to load CSV file
+            csv_paths = [
+                os.path.join(os.path.dirname(__file__), "..", "..", INDIAN_RECIPES_CSV),
+                os.path.join(os.path.dirname(__file__), "..", INDIAN_RECIPES_CSV),
+                INDIAN_RECIPES_CSV,
+            ]
+            
+            for path in csv_paths:
+                if os.path.exists(path):
+                    print(f"DEBUG: Loading CSV from {path} to extract images")
+                    csv_df = pd.read_csv(path)
+                    # Normalize column names
+                    csv_df.columns = csv_df.columns.str.lower().str.strip()
+                    print(f"DEBUG: Loaded CSV with {len(csv_df)} recipes and columns: {list(csv_df.columns)}")
+                    break
+            
+            if csv_df is not None and 'image_url' in csv_df.columns:
+                # Create a mapping of recipe names to image URLs from CSV
+                recipe_image_map = {}
+                for _, csv_row in csv_df.iterrows():
+                    recipe_name_csv = str(csv_row.get('name', '')).strip().lower()
+                    image_url_csv = csv_row.get('image_url', '')
+                    if recipe_name_csv and image_url_csv:
+                        # Handle different types
+                        if hasattr(image_url_csv, 'item'):
+                            image_url_csv = image_url_csv.item()
+                        img_str = str(image_url_csv).strip()
+                        if (img_str and 
+                            len(img_str) > 10 and
+                            img_str.lower() not in ['nan', 'none', '', 'null'] and
+                            (img_str.startswith('http://') or img_str.startswith('https://'))):
+                            recipe_image_map[recipe_name_csv] = img_str
+                
+                print(f"DEBUG: Created image map with {len(recipe_image_map)} recipes")
+                
+                # Update images for matched recipes
+                for recipe in top_recipes:
+                    recipe_title = str(recipe.get('title', '')).strip().lower()
+                    if recipe_title in recipe_image_map:
+                        recipe['image'] = recipe_image_map[recipe_title]
+                        print(f"DEBUG: ✓✓ Image from CSV for '{recipe.get('title', '')[:40]}...': {recipe['image'][:80]}...")
+                    else:
+                        print(f"DEBUG: ✗✗ No image in CSV for '{recipe.get('title', '')[:40]}...'")
+            else:
+                print(f"DEBUG: CSV not found or missing image_url column")
+        except Exception as e:
+            print(f"DEBUG: Error loading CSV for images: {str(e)}")
+            import traceback
+            traceback.print_exc()
         
         return {
             "success": True,
