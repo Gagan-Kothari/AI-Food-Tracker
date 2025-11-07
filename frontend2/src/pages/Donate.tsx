@@ -22,6 +22,7 @@ interface NGO {
   contact: string
   description: string
   distance_km?: number
+  rating?: number
 }
 
 export default function Donate() {
