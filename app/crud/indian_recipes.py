@@ -717,21 +717,51 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
         # Extract images from CSV for the matched recipes
         csv_df = None
         try:
-            # Try to load CSV file
+            # Try to load CSV file - check multiple possible locations
+            # On Railway, working directory is /app, so CSV might be at root or in app/
+            current_dir = os.path.dirname(__file__)  # app/crud/
+            app_dir = os.path.dirname(current_dir)  # app/
+            root_dir = os.path.dirname(app_dir)  # root/ (parent of app/)
+            
+            # Build comprehensive list of possible paths
             csv_paths = [
-                os.path.join(os.path.dirname(__file__), "..", "..", INDIAN_RECIPES_CSV),
-                os.path.join(os.path.dirname(__file__), "..", INDIAN_RECIPES_CSV),
-                INDIAN_RECIPES_CSV,
+                os.path.join(root_dir, INDIAN_RECIPES_CSV),  # root/indian_food.csv (project root)
+                os.path.join(app_dir, INDIAN_RECIPES_CSV),  # app/indian_food.csv
+                os.path.join(current_dir, INDIAN_RECIPES_CSV),  # app/crud/indian_food.csv
+                INDIAN_RECIPES_CSV,  # Current working directory
+                os.path.join("/app", INDIAN_RECIPES_CSV),  # Railway: /app/indian_food.csv
+                os.path.join("/", INDIAN_RECIPES_CSV),  # Railway root: /indian_food.csv
+                # Also check if Railway mounts it at project root (one level up from /app)
+                os.path.abspath(os.path.join("/app", "..", INDIAN_RECIPES_CSV)),  # /app/../indian_food.csv
             ]
             
-            for path in csv_paths:
-                if os.path.exists(path):
-                    print(f"DEBUG: Loading CSV from {path} to extract images")
-                    csv_df = pd.read_csv(path)
-                    # Normalize column names
-                    csv_df.columns = csv_df.columns.str.lower().str.strip()
-                    print(f"DEBUG: Loaded CSV with {len(csv_df)} recipes and columns: {list(csv_df.columns)}")
+            print(f"DEBUG: ===== SEARCHING FOR CSV FILE =====")
+            print(f"DEBUG: Current directory: {os.getcwd()}")
+            print(f"DEBUG: __file__ location: {__file__}")
+            print(f"DEBUG: CSV filename: {INDIAN_RECIPES_CSV}")
+            print(f"DEBUG: Checking {len(csv_paths)} possible paths:")
+            
+            found_path = None
+            for i, path in enumerate(csv_paths):
+                abs_path = os.path.abspath(path)
+                exists = os.path.exists(path)
+                print(f"DEBUG:   [{i+1}] {path}")
+                print(f"DEBUG:       Absolute: {abs_path}")
+                print(f"DEBUG:       Exists: {exists}")
+                if exists:
+                    found_path = path
                     break
+            
+            if found_path:
+                print(f"DEBUG: ✓✓ FOUND CSV at: {found_path}")
+                print(f"DEBUG: Loading CSV from {found_path} to extract images")
+                csv_df = pd.read_csv(found_path)
+                # Normalize column names
+                csv_df.columns = csv_df.columns.str.lower().str.strip()
+                print(f"DEBUG: Loaded CSV with {len(csv_df)} recipes and columns: {list(csv_df.columns)}")
+            else:
+                print(f"DEBUG: ✗✗ CSV FILE NOT FOUND in any of the checked paths")
+                print(f"DEBUG: Please ensure {INDIAN_RECIPES_CSV} is uploaded to Railway")
             
             if csv_df is not None and 'image_url' in csv_df.columns:
                 # Create a mapping of recipe names to image URLs from CSV
