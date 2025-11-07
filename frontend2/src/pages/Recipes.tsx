@@ -9,6 +9,7 @@ interface Recipe {
   id: number
   title: string
   image: string
+  source?: string  // "indian" or "foreign"
   usedIngredientCount: number
   missedIngredientCount: number
   priorityScore?: number
@@ -72,7 +73,8 @@ export default function Recipes() {
           return {
             id: recipe.id,
             title: recipe.title,
-            image: recipe.image || "",  // Not used anymore, but keep for compatibility
+            image: recipe.image || "",
+            source: recipe.source || "foreign",  // Track recipe source
             usedIngredientCount: recipe.usedIngredientCount || 0,
             missedIngredientCount: recipe.missedIngredientCount || 0,
             priorityScore: recipe.priority_score || 0,
@@ -241,8 +243,28 @@ export default function Recipes() {
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all hover:shadow-md flex flex-col h-full"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all hover:shadow-md flex flex-col h-full"
             >
+                {/* Show image only for foreign recipes */}
+                {recipe.source !== "indian" && recipe.image && recipe.image.startsWith('http') && (
+                  <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                    <img 
+                      src={recipe.image} 
+                      alt={recipe.title} 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        console.error(`Failed to load image for ${recipe.title}:`, recipe.image)
+                        const target = e.currentTarget
+                        target.style.display = 'none'
+                      }}
+                      onLoad={() => {
+                        console.log(`Successfully loaded image for ${recipe.title}:`, recipe.image)
+                      }}
+                    />
+                  </div>
+                )}
+                
+                <div className="p-6 flex flex-col flex-1">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{recipe.title}</h3>
@@ -373,7 +395,8 @@ export default function Recipes() {
                     I Cooked This!
                   </button>
                 </div>
-            </div>
+                </div>
+              </div>
           ))}
         </div>
       )}
@@ -390,6 +413,20 @@ export default function Recipes() {
                 </button>
               </div>
 
+              {/* Show image only for foreign recipes in modal */}
+              {selectedRecipe.source !== "indian" && selectedRecipe.image && selectedRecipe.image.startsWith('http') && (
+                <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6 overflow-hidden flex items-center justify-center">
+                  <img 
+                    src={selectedRecipe.image} 
+                    alt={selectedRecipe.title} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      target.style.display = 'none'
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="space-y-6">
                 <div>

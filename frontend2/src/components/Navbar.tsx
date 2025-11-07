@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
 import { useDarkMode } from "../contexts/DarkModeContext"
@@ -27,12 +27,39 @@ export default function Navbar() {
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [userPoints, setUserPoints] = useState(0)
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 })
+  const navRefs = useRef<{ [key: string]: HTMLAnchorElement | null }>({})
+  const navContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (user?.userid) {
       fetchUserPoints()
     }
   }, [user?.userid])
+
+  // Update sliding indicator position when route changes
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeItem = navRefs.current[location.pathname]
+      const container = navContainerRef.current
+      
+      if (activeItem && container) {
+        const containerRect = container.getBoundingClientRect()
+        const itemRect = activeItem.getBoundingClientRect()
+        
+        setIndicatorStyle({
+          left: itemRect.left - containerRect.left,
+          width: itemRect.width,
+        })
+      }
+    }
+
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(updateIndicator, 10)
+    updateIndicator() // Also call immediately
+
+    return () => clearTimeout(timeoutId)
+  }, [location.pathname])
 
   const fetchUserPoints = async () => {
     try {
@@ -75,25 +102,48 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1 relative">
+          <div 
+            ref={navContainerRef}
+            className="hidden md:flex items-center space-x-1 relative"
+          >
+            {/* Sliding Background Indicator */}
+            <div
+              className="absolute h-10 bg-green-50 dark:bg-green-900/30 rounded-lg transition-all duration-500 ease-in-out pointer-events-none"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                transform: 'translateZ(0)', // Hardware acceleration
+              }}
+            />
+            
+            {/* Sliding Underline Indicator */}
+            <div
+              className="absolute bottom-0 h-0.5 bg-green-600 dark:bg-green-400 rounded-full transition-all duration-500 ease-in-out pointer-events-none"
+              style={{
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                transform: 'translateZ(0)', // Hardware acceleration
+              }}
+            />
+
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path
               return (
                 <Link
                   key={item.name}
+                  ref={(el) => {
+                    navRefs.current[item.path] = el
+                  }}
                   to={item.path}
-                  className={`relative flex items-center space-x-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+                  className={`relative z-10 flex items-center space-x-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
                     isActive
-                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 scale-[1.02] shadow-sm"
-                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-[1.02]"
+                      ? "text-green-600 dark:text-green-400 scale-[1.02]"
+                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:scale-[1.02]"
                   }`}
                 >
                   <Icon className={`w-5 h-5 transition-all duration-300 ${isActive ? 'scale-110 text-green-600 dark:text-green-400' : ''}`} />
                   <span className="transition-all duration-300 font-medium">{item.name}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-400 rounded-full transform origin-left animate-slide-in"></span>
-                  )}
                 </Link>
               )
             })}
