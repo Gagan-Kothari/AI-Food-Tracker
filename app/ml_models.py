@@ -171,18 +171,37 @@ def predict_user_grocery_needs(user_id: int) -> List[Dict]:
                 (consumption_df['consumption_date'] >= last_week)
             ].empty
             
+            # Also check consumption pattern over last 4 weeks for better prediction
+            four_weeks_ago = datetime.now() - timedelta(weeks=4)
+            recent_consumption = consumption_df[
+                (consumption_df['f_id'] == item['f_id']) & 
+                (consumption_df['consumption_date'] >= four_weeks_ago)
+            ]
+            consumption_frequency = len(recent_consumption)
+            
             # Predict for next week
             X_pred = pd.DataFrame({'prev_week': [1 if was_consumed_last_week else 0]})
             prediction = model.predict(X_pred)[0]
             confidence = model.predict_proba(X_pred)[0][1]  # Probability of needing the item
             
+            # Boost confidence if there's a regular consumption pattern (e.g., weekly)
+            if consumption_frequency >= 3:  # Consumed 3+ times in last 4 weeks suggests regular pattern
+                confidence = min(confidence * 1.2, 1.0)  # Boost by 20% but cap at 1.0
+            
             if prediction == 1 or confidence > 0.3:  # Threshold for recommendation
+                reason = f"Based on consumption pattern"
+                if was_consumed_last_week:
+                    reason += " (consumed last week)"
+                if consumption_frequency > 0:
+                    reason += f" - {consumption_frequency} time(s) in last 4 weeks"
+                reason += f" (confidence: {float(confidence):.2f})"
+                
                 recommendations.append({
                     'f_id': int(item['f_id']),
                     'name': str(item['f_name']),
                     'category': str(item['category']),
                     'confidence': float(confidence),
-                    'reason': f"Based on consumption pattern (confidence: {float(confidence):.2f})"
+                    'reason': reason
                 })
         
         return sorted(recommendations, key=lambda x: x['confidence'], reverse=True)
