@@ -95,8 +95,8 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.username}! 👋</h1>
-        <p className="text-gray-600">Manage your food inventory and reduce waste with smart tracking.</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {user?.username}! 👋</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your food inventory and reduce waste with smart tracking.</p>
       </div>
 
 
@@ -107,15 +107,15 @@ export default function Dashboard() {
           const Icon = card.icon
           return (
             <Link key={card.title} to={card.path} className="group block">
-              <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 p-6 border border-gray-100">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 p-6 border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-lg ${card.color} ${card.hoverColor} transition-colors`}>
                     <Icon className="h-6 w-6 text-white" />
                   </div>
-                  <ChevronRightIcon className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                  <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{card.title}</h3>
-                <p className="text-gray-600 text-sm">{card.description}</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">{card.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">{card.description}</p>
               </div>
             </Link>
           )
