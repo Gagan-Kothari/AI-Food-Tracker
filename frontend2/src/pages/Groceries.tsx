@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { apiService } from "../services/api"
-import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon } from "@heroicons/react/24/outline"
+import { ShoppingCartIcon, PlusIcon, MinusIcon, DocumentArrowDownIcon, CheckIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 
 interface GroceryItem {
   id: number
@@ -98,6 +98,16 @@ export default function Groceries() {
         return "text-green-600 bg-green-100"
       default:
         return "text-gray-600 bg-gray-100"
+    }
+  }
+
+  const getGroceryStoreLinks = (itemName: string) => {
+    const encodedName = encodeURIComponent(itemName)
+    return {
+      blinkit: `https://blinkit.com/search?q=${encodedName}`,
+      zepto: `https://www.zeptonow.com/search?q=${encodedName}`,
+      flipkart: `https://www.flipkart.com/grocery/search?q=${encodedName}`,
+      amazon: `https://www.amazon.in/s?k=${encodedName}&i=grocery`
     }
   }
 
@@ -211,6 +221,24 @@ export default function Groceries() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{item.reason}</p>
+                        
+                        {/* Grocery Store Links */}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="text-xs text-gray-500 font-medium">Buy from:</span>
+                          {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
+                            <a
+                              key={store}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {store.charAt(0).toUpperCase() + store.slice(1)}
+                              <ArrowTopRightOnSquareIcon className="w-3 h-3" />
+                            </a>
+                          ))}
+                        </div>
                       </div>
                     </div>
 

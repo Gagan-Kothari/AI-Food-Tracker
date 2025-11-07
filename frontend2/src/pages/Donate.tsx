@@ -21,6 +21,7 @@ interface NGO {
   address: string
   contact: string
   description: string
+  distance_km?: number
 }
 
 export default function Donate() {
@@ -35,35 +36,67 @@ export default function Donate() {
   const [totalPoints, setTotalPoints] = useState(0)
   const [redirectCountdown, setRedirectCountdown] = useState(3)
   const [error, setError] = useState<string | null>(null)
-
-  // Mock NGO data - in real app, this would come from your backend
-  const ngos: NGO[] = [
-    {
-      id: 1,
-      name: "Food Bank Central",
-      address: "123 Main St, City",
-      contact: "+1 234-567-8900",
-      description: "Helping families in need with fresh food donations",
-    },
-    {
-      id: 2,
-      name: "Community Kitchen",
-      address: "456 Oak Ave, City",
-      contact: "+1 234-567-8901",
-      description: "Providing meals to homeless and low-income individuals",
-    },
-    {
-      id: 3,
-      name: "Shelter Support Network",
-      address: "789 Pine St, City",
-      contact: "+1 234-567-8902",
-      description: "Supporting local shelters with food and supplies",
-    },
-  ]
+  const [ngos, setNGOs] = useState<NGO[]>([])
+  const [loadingNGOs, setLoadingNGOs] = useState(true)
 
   useEffect(() => {
     fetchEligibleItems()
+    fetchNGOs()
   }, [])
+
+  const fetchNGOs = async () => {
+    try {
+      setLoadingNGOs(true)
+      
+      // Try to get user's location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords
+            try {
+              const response = await apiService.getNGOs(latitude, longitude)
+              if (response.data && response.data.ngos) {
+                setNGOs(response.data.ngos)
+              }
+            } catch (error) {
+              console.error("Error fetching NGOs by location:", error)
+              // Fallback to city-based search
+              fetchNGOsByCity()
+            } finally {
+              setLoadingNGOs(false)
+            }
+          },
+          async (error) => {
+            console.warn("Geolocation error:", error)
+            // Fallback to city-based search
+            fetchNGOsByCity()
+          },
+          { timeout: 5000 }
+        )
+      } else {
+        // Browser doesn't support geolocation, use city-based search
+        fetchNGOsByCity()
+      }
+    } catch (error) {
+      console.error("Error fetching NGOs:", error)
+      setLoadingNGOs(false)
+    }
+  }
+
+  const fetchNGOsByCity = async () => {
+    try {
+      // Try to detect city from IP or use default
+      // For now, we'll use a default city or let user specify
+      const response = await apiService.getNGOs(undefined, undefined, "default")
+      if (response.data && response.data.ngos) {
+        setNGOs(response.data.ngos)
+      }
+    } catch (error) {
+      console.error("Error fetching NGOs by city:", error)
+    } finally {
+      setLoadingNGOs(false)
+    }
+  }
 
   const fetchEligibleItems = async () => {
     if (!user?.userid) return
@@ -275,8 +308,23 @@ export default function Donate() {
           {/* NGO Selection */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Select NGO</h2>
-            <div className="space-y-4">
-              {ngos.map((ngo) => (
+            {loadingNGOs ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="border-2 rounded-lg p-4 animate-pulse bg-gray-100">
+                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded w-full mb-1"></div>
+                    <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+                  </div>
+                ))}
+              </div>
+            ) : ngos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No NGOs found in your area. Please try again later.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {ngos.map((ngo) => (
                 <div
                   key={ngo.id}
                   className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
@@ -291,6 +339,9 @@ export default function Donate() {
                       <div className="mt-2 text-sm text-gray-500">
                         <p>{ngo.address}</p>
                         <p>{ngo.contact}</p>
+                        {ngo.distance_km !== undefined && ngo.distance_km > 0 && (
+                          <p className="text-blue-600 font-medium mt-1">📍 {ngo.distance_km} km away</p>
+                        )}
                       </div>
                     </div>
                     <div

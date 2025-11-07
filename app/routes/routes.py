@@ -1,6 +1,7 @@
 from app.schemas.schemas import *
 from app.crud import *
 from app.crud.recipe_crud import get_inventory_based_recipes
+from app.crud.ngo_crud import get_ngos_by_location, get_ngos_by_city
 from app.ml_models import get_grocery_suggestions, train_all_user_models, retrain_user_model
 from fastapi import APIRouter, Depends, Query, Header, HTTPException, status # type: ignore
 from datetime import date, datetime
@@ -258,6 +259,28 @@ async def retrain_user_model_route(request: UserIdRequest):
     """Retrain ML model for a specific user"""
     result = retrain_user_model(request.userid)
     return result
+
+@router.post("/user/ngos")
+async def get_ngos_route(request: dict):
+    """
+    Get NGOs based on user location.
+    Accepts either latitude/longitude or city name.
+    """
+    latitude = request.get("latitude")
+    longitude = request.get("longitude")
+    city = request.get("city")
+    
+    if latitude is not None and longitude is not None:
+        # Get NGOs by location
+        ngos = get_ngos_by_location(float(latitude), float(longitude), limit=4)
+    elif city:
+        # Get NGOs by city name
+        ngos = get_ngos_by_city(city, limit=4)
+    else:
+        # Default: return NGOs for a default location
+        ngos = get_ngos_by_city("default", limit=4)
+    
+    return {"ngos": ngos, "count": len(ngos)}
 
 
 @router.post("/admin/users")

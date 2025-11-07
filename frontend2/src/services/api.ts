@@ -85,4 +85,8 @@ export const apiService = {
 
   // Dashboard stats
   getDashboardStats: (userid: string) => api.get(`/user/dashboard-stats/${userid}`),
+
+  // NGOs
+  getNGOs: (latitude?: number, longitude?: number, city?: string) => 
+    api.post("/user/ngos", { latitude, longitude, city }),
 }
