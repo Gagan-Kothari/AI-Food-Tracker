@@ -100,18 +100,59 @@ def send_whatsapp_message(to_phone: str, message: str) -> dict:
             "Content-Type": "application/json"
         }
         
-        # Request payload - matching the working test template format
+        # Request payload - Use template format since test template works but text messages don't
+        # In development mode, business-initiated messages require templates (text messages only work in 24-hour window)
+        # Try to use custom template if available, otherwise fall back to hello_world for testing
         # Note: WhatsApp API expects phone number WITHOUT + sign (e.g., "919811546101" not "+919811546101")
-        # Also note: "recipient_type" is optional, removing it to match test template exactly
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": whatsapp_phone,
-            "type": "text",
-            "text": {
-                "preview_url": False,
-                "body": message
+        
+        # Check if we have a custom template name (can be set via environment variable)
+        template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "hello_world")
+        
+        # Build template payload
+        # For hello_world: no components needed (fixed message)
+        # For custom templates: include components with message body
+        if template_name == "hello_world":
+            # Use hello_world template (fixed message, no custom content)
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": whatsapp_phone,
+                "type": "template",
+                "template": {
+                    "name": "hello_world",
+                    "language": {
+                        "code": "en_US"
+                    }
+                }
             }
-        }
+            print(f"DEBUG: Using hello_world template (test template - will send 'Hello World!' message)")
+            print(f"DEBUG: Original message was: {message[:100]}...")
+            print(f"WARNING: hello_world template has fixed content. Create custom templates for actual messages.")
+        else:
+            # Use custom template with message body as parameter
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": whatsapp_phone,
+                "type": "template",
+                "template": {
+                    "name": template_name,
+                    "language": {
+                        "code": "en_US"
+                    },
+                    "components": [
+                        {
+                            "type": "body",
+                            "parameters": [
+                                {
+                                    "type": "text",
+                                    "text": message
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+            print(f"DEBUG: Using custom template: {template_name}")
+            print(f"DEBUG: Message content: {message[:100]}...")
         
         print(f"DEBUG: WhatsApp API URL: {url}")
         print(f"DEBUG: Full URL matches test template format: https://graph.facebook.com/{WHATSAPP_API_VERSION}/{WHATSAPP_PHONE_NUMBER_ID}/messages")
