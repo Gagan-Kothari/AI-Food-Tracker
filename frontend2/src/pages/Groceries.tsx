@@ -199,7 +199,13 @@ export default function Groceries() {
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-6 transition-colors ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  className={`p-6 transition-colors relative ${selectedItems.has(item.id) ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-700/50"}`}
+                  onClick={(e) => {
+                    // Only toggle selection if clicking on the item itself, not on links
+                    if ((e.target as HTMLElement).closest('a') === null) {
+                      // Allow default behavior for non-link clicks
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -224,24 +230,30 @@ export default function Groceries() {
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{item.reason}</p>
                         
-                        {/* Grocery Store Links - Made more prominent */}
-                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold mb-2.5">🛒 Buy from online stores:</p>
-                          <div className="flex flex-wrap gap-2.5">
+                        {/* Grocery Store Links - Made more prominent and clickable */}
+                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-700 relative z-10">
+                          <p className="text-sm text-gray-700 dark:text-gray-300 font-bold mb-3 flex items-center gap-2">
+                            <span className="text-lg">🛒</span>
+                            <span>Buy from online stores:</span>
+                          </p>
+                          <div className="flex flex-wrap gap-3">
                             {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => (
                               <a
                                 key={store}
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-all duration-200 shadow-md hover:shadow-lg font-medium cursor-pointer transform hover:scale-105 active:scale-95"
+                                className="inline-flex items-center justify-center gap-2 text-base px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white transition-all duration-200 shadow-lg hover:shadow-xl font-semibold cursor-pointer transform hover:scale-110 active:scale-95 no-underline relative z-20"
+                                style={{ pointerEvents: 'auto' }}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  console.log(`Opening ${store} for ${item.name}`)
+                                  e.preventDefault()
+                                  window.open(url, '_blank', 'noopener,noreferrer')
+                                  console.log(`Opening ${store} for ${item.name}: ${url}`)
                                 }}
                               >
-                                <span>{store.charAt(0).toUpperCase() + store.slice(1)}</span>
-                                <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                                <span className="font-bold">{store.charAt(0).toUpperCase() + store.slice(1)}</span>
+                                <ArrowTopRightOnSquareIcon className="w-5 h-5" />
                               </a>
                             ))}
                           </div>
