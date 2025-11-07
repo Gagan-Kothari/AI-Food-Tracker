@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="url(#bgGradient)"/>
+  <!-- Apple shape -->
+  <path d="M 90 35 Q 63 35 54 63 Q 45 90 54 117 Q 63 135 81 140 Q 90 144 99 140 Q 117 135 126 117 Q 135 90 126 63 Q 117 35 90 35 Z" fill="#ffffff" opacity="0.95"/>
+  <!-- Apple highlight -->
+  <ellipse cx="81" cy="72" rx="14" ry="22" fill="#ffffff" opacity="0.3"/>
+  <!-- Leaf -->
+  <path d="M 90 35 Q 99 27 108 35 Q 104 32 99 35 Z" fill="#22c55e"/>
+</svg>
