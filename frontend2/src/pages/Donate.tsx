@@ -71,7 +71,7 @@ export default function Donate() {
               
               if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
                 console.log(`✅ Setting ${response.data.ngos.length} NGOs`)
-                console.log("NGOs details:", response.data.ngos.map(n => ({ id: n.id, name: n.name, distance: n.distance_km })))
+                console.log("NGOs details:", response.data.ngos.map((n: NGO) => ({ id: n.id, name: n.name, distance: n.distance_km })))
                 setNGOs(response.data.ngos)
               } else {
                 console.warn("❌ Invalid NGO response format:", response.data)
@@ -130,7 +130,7 @@ export default function Donate() {
       
       if (response.data && response.data.ngos && Array.isArray(response.data.ngos)) {
         console.log(`✅ Setting ${response.data.ngos.length} NGOs from city search`)
-        console.log("NGOs details:", response.data.ngos.map(n => ({ id: n.id, name: n.name, distance: n.distance_km })))
+        console.log("NGOs details:", response.data.ngos.map((n: NGO) => ({ id: n.id, name: n.name, distance: n.distance_km })))
         setNGOs(response.data.ngos)
       } else {
         console.error("❌ Invalid NGO response format:", response.data)
