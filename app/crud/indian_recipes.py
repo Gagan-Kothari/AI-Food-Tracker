@@ -468,6 +468,35 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 continue
             seen_names.add(recipe_name)
             
+            # Extract image URL directly from dataframe (before converting to dict)
+            # The CSV has 'image_url' column which becomes 'image_url' after normalization
+            recipe_image = ""
+            try:
+                # Access directly from dataframe to ensure we get the right column
+                row = df.iloc[idx]
+                # Check for image_url column (normalized to lowercase)
+                if 'image_url' in df.columns:
+                    img_val = row['image_url']  # Use bracket notation for pandas Series
+                    if pd.notna(img_val) and img_val:
+                        img_str = str(img_val).strip()
+                        if img_str and img_str.lower() != 'nan' and img_str.lower() != 'none' and (img_str.startswith('http://') or img_str.startswith('https://')):
+                            recipe_image = img_str
+                            print(f"DEBUG: Found image for {recipe_name}: {recipe_image[:50]}...")
+            except (KeyError, IndexError, Exception) as e:
+                print(f"DEBUG: Error extracting image for recipe {recipe_name}: {str(e)}")
+                # Try alternative column names
+                for col in df.columns:
+                    if 'image' in str(col).lower():
+                        try:
+                            img_val = row[col]
+                            if pd.notna(img_val) and img_val:
+                                img_str = str(img_val).strip()
+                                if img_str and img_str.lower() != 'nan' and (img_str.startswith('http://') or img_str.startswith('https://')):
+                                    recipe_image = img_str
+                                    break
+                        except:
+                            continue
+            
             # Extract ingredients list
             recipe_ingredients_str = recipe.get('ingredients', '')
             recipe_ingredients = [ing.strip() for ing in recipe_ingredients_str.split(',') if ing.strip()]
@@ -524,13 +553,16 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 prep_time = safe_int_parse(recipe.get('prep_time'), default=0)
                 cook_time = safe_int_parse(recipe.get('cook_time'), default=0)
                 
-                # Try to get image from various possible column names
-                recipe_image = ""
-                for img_col in ['image', 'image_url', 'imageurl', 'image_urls', 'photo', 'photo_url']:
-                    img_val = recipe.get(img_col, '')
-                    if img_val and str(img_val).strip() and str(img_val) != 'nan':
-                        recipe_image = str(img_val).strip()
-                        break
+                # recipe_image was already extracted above from the dataframe
+                # If it's still empty, try one more time from the dict
+                if not recipe_image:
+                    for img_col in ['image_url', 'imageurl', 'image', 'image_urls', 'photo', 'photo_url']:
+                        img_val = recipe.get(img_col, '')
+                        if img_val and pd.notna(img_val):
+                            img_str = str(img_val).strip()
+                            if img_str and img_str.lower() != 'nan' and (img_str.startswith('http://') or img_str.startswith('https://')):
+                                recipe_image = img_str
+                                break
                 
                 recipe_data = {
                     "id": recipe_id,
