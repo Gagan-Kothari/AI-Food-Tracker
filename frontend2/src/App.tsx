@@ -17,6 +17,10 @@ import Inventory from "./pages/Inventory"
 import Donate from "./pages/Donate"
 import Recipes from "./pages/Recipes"
 import Groceries from "./pages/Groceries"
+import About from "./pages/About"
+import PrivacyPolicy from "./pages/PrivacyPolicy"
+import Contact from "./pages/Contact"
+import Marketplace from "./pages/Marketplace"
 import "./App.css"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -121,6 +125,17 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/marketplace"
+            element={
+              <ProtectedRoute>
+                <Marketplace />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/" element={<Navigate to={user ? (user.isAdmin ? "/admin" : "/dashboard") : "/login"} />} />
         </Routes>
       </main>

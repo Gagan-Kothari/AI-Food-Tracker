@@ -64,3 +64,29 @@ class RecipesTried(Base):
     timestamp = Column(DateTime)
 
     user = relationship("Users")
+
+
+class Coupons(Base):
+    __tablename__ = "coupons"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String, nullable=False)  # e.g., "Blinkit", "Zomato"
+    description = Column(String)
+    points_required = Column(Integer, nullable=False)
+    discount = Column(String)  # e.g., "10% OFF", "₹50 OFF"
+    valid_until = Column(DateTime)
+    is_active = Column(Boolean, default=True)
+
+
+class CouponClaims(Base):
+    __tablename__ = "coupon_claims"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    coupon_id = Column(Integer, ForeignKey("coupons.id"))
+    coupon_code = Column(String, nullable=False)  # Generated coupon code
+    claimed_at = Column(DateTime)
+    is_used = Column(Boolean, default=False)
+
+    user = relationship("Users")
+    coupon = relationship("Coupons")

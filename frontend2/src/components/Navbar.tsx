@@ -12,6 +12,7 @@ import {
   HeartIcon,
   BookOpenIcon,
   ShoppingCartIcon,
+  ShoppingBagIcon,
   UserIcon,
   Bars3Icon,
   XMarkIcon,
@@ -56,6 +57,7 @@ export default function Navbar() {
     { name: "Donate", path: "/donate", icon: HeartIcon },
     { name: "Recipes", path: "/recipes", icon: BookOpenIcon },
     { name: "Groceries", path: "/groceries", icon: ShoppingCartIcon },
+    { name: "Marketplace", path: "/marketplace", icon: ShoppingBagIcon },
   ]
 
   return (

@@ -2,6 +2,7 @@ from app.schemas.schemas import *
 from app.crud import *
 from app.crud.recipe_crud import get_inventory_based_recipes
 from app.crud.ngo_crud import get_ngos_by_location, get_ngos_by_city
+from app.crud.coupon_crud import get_available_coupons, claim_coupon
 from app.ml_models import get_grocery_suggestions, train_all_user_models, retrain_user_model
 from fastapi import APIRouter, Depends, Query, Header, HTTPException, status # type: ignore
 from datetime import date, datetime
@@ -390,4 +391,53 @@ async def get_categories():
     # Return unique categories, sorted
     unique_categories = sorted(list(set(FOOD_CATEGORIES)))
     return {"categories": unique_categories}
+
+
+@router.get("/user/coupons")
+async def get_coupons_route(db: Session = Depends(get_db)):
+    """
+    Get all available coupons for redemption.
+    """
+    try:
+        coupons = get_available_coupons(db)
+        return {
+            "status": True,
+            "coupons": coupons,
+            "count": len(coupons)
+        }
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Failed to fetch coupons: {str(e)}",
+            "coupons": []
+        }
+
+
+@router.post("/user/coupons/claim")
+async def claim_coupon_route(request: dict, db: Session = Depends(get_db)):
+    """
+    Claim a coupon for a user.
+    
+    Request body:
+    - userid: User ID
+    - coupon_id: Coupon ID to claim
+    """
+    try:
+        user_id = int(request.get("userid"))
+        coupon_id = int(request.get("coupon_id"))
+        
+        if not user_id or not coupon_id:
+            return {
+                "status": False,
+                "message": "userid and coupon_id are required"
+            }
+        
+        result = claim_coupon(db, user_id, coupon_id)
+        return result
+        
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Failed to claim coupon: {str(e)}"
+        }
 

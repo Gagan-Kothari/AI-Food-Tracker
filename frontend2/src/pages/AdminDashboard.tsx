@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
+import { useDarkMode } from "../contexts/DarkModeContext"
 import { apiService } from "../services/api"
+import { SunIcon, MoonIcon } from "@heroicons/react/24/outline"
 
 interface UserRow {
   id: number
@@ -14,6 +16,7 @@ interface UserRow {
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth()
+  const { darkMode, toggleDarkMode } = useDarkMode()
   const navigate = useNavigate()
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
@@ -139,11 +142,25 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 transition-colors">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <button onClick={handleLogout} className="text-red-600">Logout</button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDarkMode}
+              className="relative p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {darkMode ? (
+                <SunIcon className="w-5 h-5 text-yellow-500" />
+              ) : (
+                <MoonIcon className="w-5 h-5" />
+              )}
+            </button>
+            <button onClick={handleLogout} className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium">Logout</button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">

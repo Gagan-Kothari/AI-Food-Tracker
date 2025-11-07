@@ -33,15 +33,15 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Support</h3>
             <div className="space-y-2">
-              <a href="#" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
+              <Link to="/about" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
                 About
-              </a>
-              <a href="#" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
+              </Link>
+              <Link to="/privacy" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
                 Privacy Policy
-              </a>
-              <a href="#" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
+              </Link>
+              <Link to="/contact" className="block text-gray-300 dark:text-gray-400 hover:text-white text-sm transition-colors">
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -98,4 +98,8 @@ export const apiService = {
     }
     return api.post("/user/ngos", payload)
   },
+
+  // Marketplace
+  getCoupons: () => api.get("/user/coupons"),
+  claimCoupon: (userid: string, couponId: number) => api.post("/user/coupons/claim", { userid, coupon_id: couponId }),
 }
