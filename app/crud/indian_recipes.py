@@ -612,48 +612,46 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 continue
             seen_names.add(recipe_name)
             
-            # Extract image URL - try multiple methods to ensure we get it
+            # Extract image URL directly from dataframe row
             recipe_image = ""
             try:
-                # Method 1: Direct access from dataframe row
+                # Direct access from dataframe - this is the most reliable method
                 if 'image_url' in df.columns:
                     img_val = row['image_url']
-                    if pd.notna(img_val):
-                        img_str = str(img_val).strip()
-                        if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
-                            recipe_image = img_str
-                            print(f"DEBUG: Found image (method 1) for {recipe_name}: {recipe_image[:60]}...")
+                    # Convert to string, handling all possible types
+                    if img_val is not None:
+                        # Handle numpy/pandas types
+                        if hasattr(img_val, 'item'):  # numpy scalar
+                            img_val = img_val.item()
+                        elif hasattr(img_val, 'values'):  # pandas Series
+                            img_val = img_val.values[0] if len(img_val.values) > 0 else None
+                        
+                        if img_val is not None:
+                            img_str = str(img_val).strip()
+                            # Validate it's a real URL
+                            if (img_str and 
+                                len(img_str) > 10 and  # Must be a reasonable URL length
+                                img_str.lower() not in ['nan', 'none', '', 'null', 'none', 'na'] and
+                                (img_str.startswith('http://') or img_str.startswith('https://'))):
+                                recipe_image = img_str
+                                print(f"DEBUG: ✓ Image extracted for '{recipe_name[:40]}...': {recipe_image[:80]}...")
                 
-                # Method 2: From dict if method 1 didn't work
-                if not recipe_image:
+                # Fallback: try from dict
+                if not recipe_image and 'image_url' in recipe:
                     img_val = recipe.get('image_url', '')
-                    if img_val and pd.notna(img_val):
+                    if img_val:
                         img_str = str(img_val).strip()
-                        if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
+                        if (len(img_str) > 10 and 
+                            img_str.lower() not in ['nan', 'none', '', 'null'] and
+                            (img_str.startswith('http://') or img_str.startswith('https://'))):
                             recipe_image = img_str
-                            print(f"DEBUG: Found image (method 2) for {recipe_name}: {recipe_image[:60]}...")
-                
-                # Method 3: Search all columns with 'image' in name
-                if not recipe_image:
-                    for col in df.columns:
-                        if 'image' in str(col).lower():
-                            try:
-                                img_val = row[col]
-                                if pd.notna(img_val):
-                                    img_str = str(img_val).strip()
-                                    if img_str and img_str.lower() not in ['nan', 'none', ''] and (img_str.startswith('http://') or img_str.startswith('https://')):
-                                        recipe_image = img_str
-                                        print(f"DEBUG: Found image (method 3, col={col}) for {recipe_name}: {recipe_image[:60]}...")
-                                        break
-                            except Exception as e:
-                                continue
+                            print(f"DEBUG: ✓ Image from dict for '{recipe_name[:40]}...': {recipe_image[:80]}...")
                 
                 if not recipe_image:
-                    print(f"DEBUG: No image found for {recipe_name}. Available columns: {[c for c in df.columns if 'image' in c.lower()]}")
+                    print(f"DEBUG: ✗ No valid image URL for '{recipe_name[:40]}...'")
             except Exception as e:
-                print(f"DEBUG: Error extracting image for recipe {recipe_name}: {str(e)}")
-                import traceback
-                traceback.print_exc()
+                print(f"DEBUG: ✗ Error extracting image: {str(e)}")
+                # Don't fail the whole recipe if image extraction fails
             
             # Extract ingredients list
             recipe_ingredients_str = recipe.get('ingredients', '')
@@ -722,10 +720,17 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                                 recipe_image = img_str
                                 break
                 
+                # Final check: ensure image is a valid string (not None, not empty)
+                if not recipe_image or recipe_image == "":
+                    recipe_image = ""  # Explicitly set to empty string
+                    print(f"DEBUG: ⚠ No image for recipe '{recipe_name[:40]}...'")
+                else:
+                    print(f"DEBUG: ✓ Final image URL for '{recipe_name[:40]}...': {recipe_image[:80]}...")
+                
                 recipe_data = {
                     "id": recipe_id,
                     "title": str(recipe_name),
-                    "image": recipe_image,
+                    "image": str(recipe_image) if recipe_image else "",  # Ensure it's always a string
                     "usedIngredientCount": int(matching_count),
                     "missedIngredientCount": int(len(missed_ingredients)),
                     "usedIngredients": used_ingredients,
@@ -736,6 +741,12 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                     "source": "indian",
                     "measurements": recipe_measurements  # Add measurements for recipe display
                 }
+                
+                # Debug: verify image is in the response
+                if recipe_data.get("image"):
+                    print(f"DEBUG: ✓✓ Image confirmed in recipe_data for '{recipe_name[:40]}...'")
+                else:
+                    print(f"DEBUG: ⚠⚠ Image MISSING in recipe_data for '{recipe_name[:40]}...'")
                 
                 # Prioritize recipes with expiry ingredients
                 if expiry_ingredients:
