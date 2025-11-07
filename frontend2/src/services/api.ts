@@ -102,4 +102,8 @@ export const apiService = {
   // Marketplace
   getCoupons: () => api.get("/user/coupons"),
   claimCoupon: (userid: string, couponId: number) => api.post("/user/coupons/claim", { userid, coupon_id: couponId }),
+
+  // Contact
+  sendContactEmail: (name: string, email: string, subject: string, message: string) =>
+    api.post("/contact/send", { name, email, subject, message }),
 }

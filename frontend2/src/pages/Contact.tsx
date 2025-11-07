@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { EnvelopeIcon, PhoneIcon, MapPinIcon } from "@heroicons/react/24/outline"
+import { apiService } from "../services/api"
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -11,16 +12,37 @@ export default function Contact() {
     message: ""
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send the form data to your backend
-    console.log("Contact form submitted:", formData)
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({ name: "", email: "", subject: "", message: "" })
-    }, 3000)
+    setSubmitting(true)
+    setError(null)
+    
+    try {
+      const response = await apiService.sendContactEmail(
+        formData.name,
+        formData.email,
+        formData.subject,
+        formData.message
+      )
+      
+      if (response.data.status) {
+        setSubmitted(true)
+        setFormData({ name: "", email: "", subject: "", message: "" })
+        setTimeout(() => {
+          setSubmitted(false)
+        }, 5000)
+      } else {
+        setError(response.data.message || "Failed to send message. Please try again.")
+      }
+    } catch (err: any) {
+      console.error("Error sending contact email:", err)
+      setError(err.response?.data?.message || "Failed to send message. Please try again later.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -41,7 +63,7 @@ export default function Contact() {
                 <EnvelopeIcon className="w-6 h-6 text-green-500 dark:text-green-400 mr-4 mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Email</h3>
-                  <p className="text-gray-600 dark:text-gray-400">support@foodtracker.com</p>
+                  <p className="text-gray-600 dark:text-gray-400">gaganXXXXXXXX@gmail.com </p>
                 </div>
               </div>
 
@@ -49,7 +71,7 @@ export default function Contact() {
                 <PhoneIcon className="w-6 h-6 text-green-500 dark:text-green-400 mr-4 mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Phone</h3>
-                  <p className="text-gray-600 dark:text-gray-400">+1 (555) 123-4567</p>
+                  <p className="text-gray-600 dark:text-gray-400">+91 9811XXXXXX</p>
                 </div>
               </div>
 
@@ -82,6 +104,11 @@ export default function Contact() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <p className="text-red-800 dark:text-red-300 text-sm">{error}</p>
+                </div>
+              )}
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Name
@@ -140,9 +167,17 @@ export default function Contact() {
 
               <button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                disabled={submitting}
+                className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Send Message
+                {submitting ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Sending...
+                  </span>
+                ) : (
+                  "Send Message"
+                )}
               </button>
             </form>
           )}

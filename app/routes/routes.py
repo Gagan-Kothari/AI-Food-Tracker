@@ -4,6 +4,7 @@ from app.crud.recipe_crud import get_inventory_based_recipes
 from app.crud.ngo_crud import get_ngos_by_location, get_ngos_by_city
 from app.crud.coupon_crud import get_available_coupons, claim_coupon
 from app.ml_models import get_grocery_suggestions, train_all_user_models, retrain_user_model
+from app.email_service import send_contact_email
 from fastapi import APIRouter, Depends, Query, Header, HTTPException, status # type: ignore
 from datetime import date, datetime
 from app.database import get_db
@@ -439,5 +440,47 @@ async def claim_coupon_route(request: dict, db: Session = Depends(get_db)):
         return {
             "status": False,
             "message": f"Failed to claim coupon: {str(e)}"
+        }
+
+
+@router.post("/contact/send")
+async def send_contact_email_route(request: dict):
+    """
+    Send contact form email.
+    
+    Request body:
+    - name: Sender's name
+    - email: Sender's email
+    - subject: Email subject
+    - message: Email message
+    """
+    try:
+        name = request.get("name", "").strip()
+        email = request.get("email", "").strip()
+        subject = request.get("subject", "").strip()
+        message = request.get("message", "").strip()
+        
+        # Validate required fields
+        if not name or not email or not subject or not message:
+            return {
+                "status": False,
+                "message": "All fields are required"
+            }
+        
+        # Basic email validation
+        if "@" not in email or "." not in email.split("@")[1]:
+            return {
+                "status": False,
+                "message": "Invalid email address"
+            }
+        
+        # Send email
+        result = send_contact_email(name, email, subject, message)
+        return result
+        
+    except Exception as e:
+        return {
+            "status": False,
+            "message": f"Failed to send email: {str(e)}"
         }
 
