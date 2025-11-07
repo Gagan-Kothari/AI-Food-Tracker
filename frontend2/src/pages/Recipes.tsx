@@ -12,6 +12,7 @@ interface Recipe {
   usedIngredientCount: number
   missedIngredientCount: number
   priorityScore?: number
+  measurements?: string[]  // Measurements for Indian recipes
   usedIngredients: Array<{
     id: number
     name: string
@@ -378,18 +379,33 @@ export default function Recipes() {
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Ingredients</h3>
                   <div className="space-y-2">
-                    {[...selectedRecipe.usedIngredients, ...selectedRecipe.missedIngredients].map((ingredient) => (
-                      <div key={ingredient.id} className="flex items-center space-x-2">
-                        <span
-                          className={`w-3 h-3 rounded-full ${
-                            selectedRecipe.usedIngredients.find((i) => i.id === ingredient.id)
-                              ? "bg-green-500 dark:bg-green-400"
-                              : "bg-orange-500 dark:bg-orange-400"
-                          }`}
-                        ></span>
-                        <span className="text-gray-700 dark:text-gray-300">{ingredient.name}</span>
-                      </div>
-                    ))}
+                    {[...selectedRecipe.usedIngredients, ...selectedRecipe.missedIngredients].map((ingredient) => {
+                      // Find measurement for this ingredient if available
+                      const measurement = selectedRecipe.measurements?.find(m => 
+                        m.toLowerCase().startsWith(ingredient.name.toLowerCase() + ":")
+                      )
+                      const measurementText = measurement ? measurement.split(":", 2)[1]?.trim() : null
+                      
+                      return (
+                        <div key={ingredient.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 flex-1">
+                            <span
+                              className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                                selectedRecipe.usedIngredients.find((i) => i.id === ingredient.id)
+                                  ? "bg-green-500 dark:bg-green-400"
+                                  : "bg-orange-500 dark:bg-orange-400"
+                              }`}
+                            ></span>
+                            <span className="text-gray-700 dark:text-gray-300">{ingredient.name}</span>
+                          </div>
+                          {measurementText && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                              {measurementText}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 

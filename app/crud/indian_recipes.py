@@ -186,6 +186,42 @@ def safe_int_parse(value, default=0):
     return default
 
 
+def extract_ingredient_name(ingredient_text: str) -> tuple:
+    """
+    Extract ingredient name and measurement from recipe ingredient text.
+    Example: "1 cup wheat flour" -> ("wheat flour", "1 cup")
+    
+    Args:
+        ingredient_text: Full ingredient text from recipe
+        
+    Returns:
+        tuple: (ingredient_name, measurement)
+    """
+    if not ingredient_text or pd.isna(ingredient_text):
+        return ("", "")
+    
+    ingredient_text = str(ingredient_text).strip()
+    
+    # Pattern to match measurements at the start (e.g., "1 cup", "2 tbsp", "500g", "1/2 teaspoon")
+    measurement_pattern = r'^(\d+(?:[\.,]\d+)?(?:\s*/\s*\d+)?\s*(?:cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|gram|grams|g|kg|kilogram|kilograms|ml|l|litre|litres|oz|ounce|ounces|piece|pieces|pcs|pc|whole|halves|halved|sliced|chopped|diced|minced|grated|crushed|powdered|pinch|pinches|dash|dashes|bunch|bunches|clove|cloves|leaf|leaves|sprig|sprigs|inch|inches|cm|mm|lb|pound|pounds)\s*,?\s*)'
+    
+    # Try to extract measurement
+    measurement_match = re.match(measurement_pattern, ingredient_text.lower())
+    measurement = ""
+    ingredient_name = ingredient_text
+    
+    if measurement_match:
+        measurement = measurement_match.group(0).strip()
+        ingredient_name = ingredient_text[len(measurement):].strip()
+    
+    # Clean ingredient name - remove extra punctuation, normalize
+    ingredient_name = re.sub(r'[^\w\s]+', ' ', ingredient_name)
+    ingredient_name = ' '.join(ingredient_name.split())
+    ingredient_name = ingredient_name.lower().strip()
+    
+    return (ingredient_name, measurement)
+
+
 def clean_ingredients(ingredients_str: str) -> str:
     """
     Clean and normalize ingredient string.
@@ -206,6 +242,84 @@ def clean_ingredients(ingredients_str: str) -> str:
     ingredients_str = ingredients_str.lower()
     
     return ingredients_str
+
+
+def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = True) -> bool:
+    """
+    Strict matching for Indian recipes - requires exact or very close matches.
+    For foreign recipes, allows more flexible matching.
+    
+    Args:
+        recipe_ing: Recipe ingredient name (cleaned)
+        user_ing: User inventory ingredient name (cleaned)
+        is_indian: Whether this is for Indian recipes (stricter matching)
+        
+    Returns:
+        bool: True if ingredients match
+    """
+    recipe_ing = recipe_ing.lower().strip()
+    user_ing = user_ing.lower().strip()
+    
+    # Exact match
+    if recipe_ing == user_ing:
+        return True
+    
+    if is_indian:
+        # For Indian recipes, be stricter
+        # Don't match different flour types
+        flour_types = {
+            'wheat flour': ['wheat flour', 'whole wheat flour'],
+            'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour'],
+            'atta': ['atta', 'whole wheat flour'],
+            'semolina': ['semolina', 'sooji', 'rava'],
+            'rice flour': ['rice flour'],
+            'besan': ['besan', 'gram flour', 'chickpea flour'],
+            'corn flour': ['corn flour', 'cornflour', 'cornstarch'],
+            'ragi flour': ['ragi flour', 'finger millet flour']
+        }
+        
+        # Check if either is a flour type
+        recipe_flour_type = None
+        user_flour_type = None
+        
+        for flour_name, variants in flour_types.items():
+            for variant in variants:
+                if variant in recipe_ing:
+                    recipe_flour_type = flour_name
+                    break
+                if variant in user_ing:
+                    user_flour_type = flour_name
+                    break
+            if recipe_flour_type and user_flour_type:
+                break
+        
+        # If both are flours, they must be the same type
+        if recipe_flour_type and user_flour_type:
+            return recipe_flour_type == user_flour_type
+        
+        # If only one is a flour, don't match (e.g., "wheat flour" shouldn't match "flour")
+        if recipe_flour_type or user_flour_type:
+            return False
+        
+        # For non-flour items, allow partial match but be more careful
+        # Only match if one is contained in the other and they're similar length
+        if user_ing in recipe_ing:
+            # User ingredient is in recipe (e.g., "jam" in "raspberry jam")
+            # Check if it's a reasonable match (not too different in length)
+            if len(recipe_ing) - len(user_ing) <= 15:  # Allow some prefix/suffix
+                return True
+        elif recipe_ing in user_ing:
+            # Recipe ingredient is in user ingredient (e.g., "onion" in "red onion")
+            if len(user_ing) - len(recipe_ing) <= 15:
+                return True
+        
+        return False
+    else:
+        # For foreign recipes, more flexible matching
+        # Allow "wheat flour" to match "refined wheat flour" for foreign recipes
+        if user_ing in recipe_ing or recipe_ing in user_ing:
+            return True
+        return False
 
 
 def create_sample_indian_recipes():
@@ -362,39 +476,46 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
             matching_count = 0
             used_ingredients = []
             missed_ingredients = []
+            recipe_measurements = []  # Store measurements for recipe display
             
             user_ingredients_lower = [ing.lower().strip() for ing in ingredients]
             
-            for recipe_ing in recipe_ingredients:
-                recipe_ing_lower = recipe_ing.lower().strip()
-                is_matched = False
+            for recipe_ing_full in recipe_ingredients:
+                # Extract ingredient name and measurement
+                ingredient_name, measurement = extract_ingredient_name(recipe_ing_full)
                 
-                # Check if recipe ingredient matches any user ingredient
+                if not ingredient_name:
+                    continue
+                
+                is_matched = False
+                matched_user_ing = None
+                
+                # Check if recipe ingredient matches any user ingredient using strict matching
                 for user_ing in user_ingredients_lower:
-                    # Exact match
-                    if user_ing == recipe_ing_lower:
+                    if match_ingredient_strict(ingredient_name, user_ing, is_indian=True):
                         is_matched = True
-                        break
-                    # Partial match (e.g., "flour" in "wheat flour")
-                    if user_ing in recipe_ing_lower or recipe_ing_lower in user_ing:
-                        is_matched = True
+                        matched_user_ing = user_ing
                         break
                 
                 if is_matched:
                     matching_count += 1
                     used_ingredients.append({
                         "id": int(len(used_ingredients) + 1),
-                        "name": str(recipe_ing),
+                        "name": ingredient_name,  # Just the ingredient name, no measurement
                         "image": "",  # Indian recipes may not have images
                         "available": True
                     })
+                    if measurement:
+                        recipe_measurements.append(f"{ingredient_name}: {measurement}")
                 else:
                     missed_ingredients.append({
                         "id": int(len(missed_ingredients) + 1),
-                        "name": str(recipe_ing),
+                        "name": ingredient_name,  # Just the ingredient name, no measurement
                         "image": "",
                         "available": False
                     })
+                    if measurement:
+                        recipe_measurements.append(f"{ingredient_name}: {measurement}")
             
             # Only include recipes with at least one matching ingredient
             if matching_count > 0:
@@ -403,10 +524,18 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                 prep_time = safe_int_parse(recipe.get('prep_time'), default=0)
                 cook_time = safe_int_parse(recipe.get('cook_time'), default=0)
                 
+                # Try to get image from various possible column names
+                recipe_image = ""
+                for img_col in ['image', 'image_url', 'imageurl', 'image_urls', 'photo', 'photo_url']:
+                    img_val = recipe.get(img_col, '')
+                    if img_val and str(img_val).strip() and str(img_val) != 'nan':
+                        recipe_image = str(img_val).strip()
+                        break
+                
                 recipe_data = {
                     "id": recipe_id,
                     "title": str(recipe_name),
-                    "image": str(recipe.get('image', '') or ""),
+                    "image": recipe_image,
                     "usedIngredientCount": int(matching_count),
                     "missedIngredientCount": int(len(missed_ingredients)),
                     "usedIngredients": used_ingredients,
@@ -414,7 +543,8 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                     "similarity_score": float(similarities[idx]),
                     "prep_time": prep_time,
                     "cook_time": cook_time,
-                    "source": "indian"
+                    "source": "indian",
+                    "measurements": recipe_measurements  # Add measurements for recipe display
                 }
                 
                 # Prioritize recipes with expiry ingredients

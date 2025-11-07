@@ -53,7 +53,7 @@ export default function Navbar() {
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: HomeIcon },
     { name: "Inventory", path: "/inventory", icon: CubeIcon },
-    { name: "Scan Item", path: "/scan", icon: CameraIcon },
+    { name: "Scan", path: "/scan", icon: CameraIcon },
     { name: "Donate", path: "/donate", icon: HeartIcon },
     { name: "Recipes", path: "/recipes", icon: BookOpenIcon },
     { name: "Groceries", path: "/groceries", icon: ShoppingCartIcon },
