@@ -751,15 +751,34 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
                             recipe_image_map[recipe_name_csv] = img_str
                 
                 print(f"DEBUG: Created image map with {len(recipe_image_map)} recipes")
+                print(f"DEBUG: Sample image URLs from CSV (first 5):")
+                sample_count = 0
+                for name, img_url in list(recipe_image_map.items())[:5]:
+                    print(f"  - {name}: {img_url}")
+                    sample_count += 1
                 
                 # Update images for matched recipes
+                print(f"\nDEBUG: ===== ASSIGNING IMAGES TO MATCHED RECIPES =====")
                 for recipe in top_recipes:
                     recipe_title = str(recipe.get('title', '')).strip().lower()
+                    print(f"\nDEBUG: Looking for image for recipe: '{recipe.get('title', '')}' (normalized: '{recipe_title}')")
+                    
                     if recipe_title in recipe_image_map:
                         recipe['image'] = recipe_image_map[recipe_title]
-                        print(f"DEBUG: ✓✓ Image from CSV for '{recipe.get('title', '')[:40]}...': {recipe['image'][:80]}...")
+                        print(f"DEBUG: ✓✓ FOUND IMAGE for '{recipe.get('title', '')}':")
+                        print(f"DEBUG:    image_url = {recipe['image']}")
                     else:
-                        print(f"DEBUG: ✗✗ No image in CSV for '{recipe.get('title', '')[:40]}...'")
+                        print(f"DEBUG: ✗✗ NO IMAGE FOUND in CSV for '{recipe.get('title', '')}'")
+                        print(f"DEBUG:    Searched for: '{recipe_title}'")
+                        print(f"DEBUG:    Available recipe names in CSV (first 10): {list(recipe_image_map.keys())[:10]}")
+                
+                print(f"\nDEBUG: ===== FINAL RECIPE IMAGES =====")
+                for recipe in top_recipes:
+                    print(f"DEBUG: Recipe: '{recipe.get('title', '')}'")
+                    print(f"DEBUG:   image_url = '{recipe.get('image', '')}'")
+                    print(f"DEBUG:   image_url length = {len(recipe.get('image', ''))}")
+                    print(f"DEBUG:   image_url valid = {recipe.get('image', '').startswith('http') if recipe.get('image') else False}")
+                    print("")
             else:
                 print(f"DEBUG: CSV not found or missing image_url column")
         except Exception as e:
