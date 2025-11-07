@@ -141,6 +141,51 @@ def load_indian_recipes():
             return None
 
 
+def safe_int_parse(value, default=0):
+    """
+    Safely parse a value to integer, handling strings, None, and invalid formats.
+    
+    Args:
+        value: Value to parse (can be int, str, None, or other types)
+        default: Default value to return if parsing fails
+        
+    Returns:
+        int: Parsed integer value or default
+    """
+    if value is None:
+        return default
+    
+    # If already an integer
+    if isinstance(value, int):
+        return value
+    
+    # If it's a float, convert to int
+    if isinstance(value, float):
+        return int(value)
+    
+    # If it's a string, try to extract number
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return default
+        
+        # Try direct conversion first
+        try:
+            return int(float(value))
+        except (ValueError, TypeError):
+            pass
+        
+        # Try to extract number from string (e.g., "Total in 55 M" -> 55)
+        numbers = re.findall(r'\d+', value)
+        if numbers:
+            try:
+                return int(numbers[0])
+            except (ValueError, TypeError):
+                pass
+    
+    return default
+
+
 def clean_ingredients(ingredients_str: str) -> str:
     """
     Clean and normalize ingredient string.
@@ -355,8 +400,8 @@ def get_indian_recipes(ingredients: List[str], number: int = 10, expiry_ingredie
             if matching_count > 0:
                 # Convert numpy types to native Python types for JSON serialization
                 recipe_id = int(idx) + 100000  # Use high IDs to avoid conflicts with Spoonacular
-                prep_time = int(recipe.get('prep_time', 0)) if recipe.get('prep_time') is not None else 0
-                cook_time = int(recipe.get('cook_time', 0)) if recipe.get('cook_time') is not None else 0
+                prep_time = safe_int_parse(recipe.get('prep_time'), default=0)
+                cook_time = safe_int_parse(recipe.get('cook_time'), default=0)
                 
                 recipe_data = {
                     "id": recipe_id,
