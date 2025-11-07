@@ -59,7 +59,11 @@ export default function Inventory() {
   }
 
   const filterAndSortItems = () => {
-    let filtered = items.filter(
+    // First, filter out expired items
+    let filtered = items.filter((item) => !isExpired(item.expiry_date))
+
+    // Then apply search filter
+    filtered = filtered.filter(
       (item) =>
         item.f_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.brands.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -67,9 +71,7 @@ export default function Inventory() {
 
     // Filter by expiry
     if (filterBy === "expiring") {
-      const threeDaysFromNow = new Date()
-      threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
-      filtered = filtered.filter((item) => new Date(item.expiry_date) <= threeDaysFromNow)
+      filtered = filtered.filter((item) => isYellowAlert(item.expiry_date) || isRedAlert(item.expiry_date))
     }
 
     // Sort items
@@ -89,12 +91,28 @@ export default function Inventory() {
     setFilteredItems(filtered)
   }
 
-  const isExpiringSoon = (expiryDate: string) => {
+  const getDaysUntilExpiry = (expiryDate: string): number => {
     const expiry = new Date(expiryDate)
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    expiry.setHours(0, 0, 0, 0)
     const diffTime = expiry.getTime() - today.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays <= 3
+    return diffDays
+  }
+
+  const isExpired = (expiryDate: string): boolean => {
+    return getDaysUntilExpiry(expiryDate) < 0
+  }
+
+  const isRedAlert = (expiryDate: string): boolean => {
+    const days = getDaysUntilExpiry(expiryDate)
+    return days >= 0 && days <= 3  // 3, 2, 1, 0 days (including today)
+  }
+
+  const isYellowAlert = (expiryDate: string): boolean => {
+    const days = getDaysUntilExpiry(expiryDate)
+    return days > 3 && days <= 7  // 7, 6, 5, 4 days
   }
 
   const formatDate = (dateString: string) => {
@@ -211,16 +229,24 @@ export default function Inventory() {
             <div
               key={item.inventory_id}
               className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 transition-all hover:shadow-md ${
-                isExpiringSoon(item.expiry_date) 
-                  ? "border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20" 
+                isRedAlert(item.expiry_date)
+                  ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/20"
+                  : isYellowAlert(item.expiry_date)
+                  ? "border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20"
                   : "border-gray-200 dark:border-gray-700"
               }`}
             >
               <div className="p-6">
-                {isExpiringSoon(item.expiry_date) && (
+                {isRedAlert(item.expiry_date) && (
+                  <div className="flex items-center text-red-600 dark:text-red-400 mb-2">
+                    <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                    <span className="text-xs font-medium">Expiring Soon (Red Alert)</span>
+                  </div>
+                )}
+                {isYellowAlert(item.expiry_date) && !isRedAlert(item.expiry_date) && (
                   <div className="flex items-center text-yellow-600 dark:text-yellow-400 mb-2">
                     <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
-                    <span className="text-xs font-medium">Expiring Soon</span>
+                    <span className="text-xs font-medium">Expiring Soon (Yellow Alert)</span>
                   </div>
                 )}
 
@@ -247,8 +273,10 @@ export default function Inventory() {
                     <span className="text-gray-600 dark:text-gray-400">Expires:</span>
                     <span
                       className={`font-medium ${
-                        isExpiringSoon(item.expiry_date) 
-                          ? "text-yellow-600 dark:text-yellow-400" 
+                        isRedAlert(item.expiry_date)
+                          ? "text-red-600 dark:text-red-400"
+                          : isYellowAlert(item.expiry_date)
+                          ? "text-yellow-600 dark:text-yellow-400"
                           : "text-gray-900 dark:text-white"
                       }`}
                     >
