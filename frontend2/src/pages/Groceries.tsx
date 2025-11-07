@@ -187,8 +187,8 @@ export default function Groceries() {
       {/* Grocery Items by Category */}
       <div className="space-y-6">
         {Object.entries(groupedItems).map(([category, items]) => (
-          <div key={category} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b dark:border-gray-600">
+          <div key={category} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-700/80 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{category}</h2>
             </div>
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -256,11 +256,11 @@ export default function Groceries() {
                     {/* Grocery Store Links - SEPARATE ROW, ALWAYS VISIBLE */}
                     <div className="w-full mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
                       {/* TEST: This red box should always be visible */}
-                      <div className="mb-2 p-2 bg-red-500 text-white font-bold text-center">
+                      <div className="mb-2 p-2 bg-red-500 dark:bg-red-600 text-white font-bold text-center rounded">
                         TEST: Store buttons should appear below this red box
                       </div>
                       
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-5 rounded-xl border-4 border-blue-500 dark:border-blue-400 shadow-2xl">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 p-5 rounded-xl border-4 border-blue-500 dark:border-blue-500 dark:border-opacity-70 shadow-2xl dark:shadow-blue-900/20">
                         <div className="flex items-center gap-2 mb-4">
                           <ShoppingCartIcon className="w-7 h-7 text-blue-600 dark:text-blue-400" />
                           <p className="text-lg font-extrabold text-gray-900 dark:text-white">
