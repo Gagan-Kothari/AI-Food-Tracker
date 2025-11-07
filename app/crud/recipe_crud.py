@@ -40,12 +40,13 @@ SPOONACULAR_API = "https://api.spoonacular.com/recipes/findByIngredients"
 SPOONACULAR_API_KEY = os.getenv("SPOONACULAR_API_KEY")
 
 
-def get_recipes(ingredients):
+def get_recipes(ingredients, number=10):
     """
     Get recipe suggestions based on available ingredients using Spoonacular API.
     
     Args:
         ingredients: List of ingredient names
+        number: Number of recipes to return (default: 10)
         
     Returns:
         dict: Recipe suggestions with success/error status
@@ -59,7 +60,7 @@ def get_recipes(ingredients):
     try:
         joined_ingredients = ",".join(ingredients)
 
-        url = f"{SPOONACULAR_API}?ingredients={joined_ingredients}&number=10&ranking=1&ignorePantry=true&apiKey={SPOONACULAR_API_KEY}"
+        url = f"{SPOONACULAR_API}?ingredients={joined_ingredients}&number={number}&ranking=1&ignorePantry=true&apiKey={SPOONACULAR_API_KEY}"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
@@ -175,13 +176,92 @@ def get_inventory_based_recipes(user_id: int, db: Session):
                 "ingredients_used": []
             }
         
-        # Get recipes from Spoonacular API
-        recipe_result = get_recipes(ingredients)
+        # Identify yellow (7 days) and red (3 days) alert items
+        today = datetime.now().date()
+        yellow_threshold = today + timedelta(days=7)  # 7 days from now
+        red_threshold = today + timedelta(days=3)    # 3 days from now
         
-        if recipe_result.get("error"):
-            return recipe_result
+        expiry_alert_items = []
+        for item in inventory_data:
+            expiry_date_str = item.get("expiry_date")
+            if expiry_date_str:
+                try:
+                    expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
+                    # Include items expiring in 7 days or less (yellow and red alerts)
+                    if expiry_date <= yellow_threshold and expiry_date >= today:
+                        expiry_alert_items.append(item)
+                except (ValueError, TypeError):
+                    continue
         
-        recipes = recipe_result.get("recipes", [])
+        # Extract ingredients for expiry alert items only
+        expiry_ingredients_set = set()
+        for item in expiry_alert_items:
+            categorystatus = item.get("categorystatus", False)
+            base_ingredient = None
+            
+            if categorystatus:
+                category = item.get("category", "")
+                if category and isinstance(category, str) and category.strip():
+                    base_ingredient = category.strip().lower()
+            else:
+                f_name = item.get("f_name", "")
+                if f_name and isinstance(f_name, str) and f_name.strip():
+                    base_ingredient = f_name.strip().lower()
+            
+            if base_ingredient:
+                expiry_ingredients_set.add(base_ingredient)
+                # Add synonyms
+                for key, synonyms in SYNONYMS.items():
+                    if key.lower() in base_ingredient or base_ingredient in key.lower():
+                        for synonym in synonyms:
+                            expiry_ingredients_set.add(synonym.lower())
+        
+        expiry_ingredients = list(expiry_ingredients_set)
+        print(f"DEBUG: Found {len(expiry_alert_items)} items with expiry alerts (yellow/red)")
+        print(f"DEBUG: Extracted {len(expiry_ingredients)} ingredients from expiry alert items")
+        
+        # Make two separate API calls
+        # 1. Get recipes for expiry alert items (5 recipes, shown first)
+        expiry_recipes = []
+        if expiry_ingredients:
+            expiry_recipe_result = get_recipes(expiry_ingredients, number=5)
+            if not expiry_recipe_result.get("error"):
+                expiry_recipes = expiry_recipe_result.get("recipes", [])
+                print(f"DEBUG: Got {len(expiry_recipes)} recipes for expiry alert items")
+        
+        # 2. Get recipes for entire inventory (5 recipes, shown after)
+        all_recipe_result = get_recipes(ingredients, number=5)
+        
+        if all_recipe_result.get("error"):
+            # If main call fails but expiry call succeeded, still return expiry recipes
+            if expiry_recipes:
+                recipes = expiry_recipes
+            else:
+                return all_recipe_result
+        else:
+            all_recipes = all_recipe_result.get("recipes", [])
+            # Combine: expiry recipes first, then all recipes
+            # Remove duplicates by recipe ID
+            seen_recipe_ids = set()
+            combined_recipes = []
+            
+            # Add expiry recipes first
+            for recipe in expiry_recipes:
+                recipe_id = recipe.get("id")
+                if recipe_id and recipe_id not in seen_recipe_ids:
+                    seen_recipe_ids.add(recipe_id)
+                    combined_recipes.append(recipe)
+            
+            # Add all recipes (excluding duplicates)
+            for recipe in all_recipes:
+                recipe_id = recipe.get("id")
+                if recipe_id and recipe_id not in seen_recipe_ids:
+                    seen_recipe_ids.add(recipe_id)
+                    combined_recipes.append(recipe)
+            
+            recipes = combined_recipes
+            print(f"DEBUG: Combined {len(expiry_recipes)} expiry recipes + {len(all_recipes)} all recipes = {len(recipes)} total")
+        
         if not recipes:
             return {
                 "success": False,
@@ -428,8 +508,56 @@ def get_inventory_based_recipes(user_id: int, db: Session):
         # Filter out recipes with 0 ingredients (usedIngredientCount = 0)
         enhanced_recipes = [recipe for recipe in enhanced_recipes if recipe.get("usedIngredientCount", 0) > 0]
         
-        # Limit to top 10 recipes
-        enhanced_recipes = enhanced_recipes[:10]
+        # Separate recipes into two groups:
+        # 1. Recipes using yellow/red alert items (expiring in 7 days or less) - shown first
+        # 2. Recipes using general inventory items - shown after
+        
+        # Get inventory IDs of expiry alert items
+        expiry_alert_inventory_ids = {item.get("inventory_id") for item in expiry_alert_items}
+        
+        expiry_alert_recipes = []
+        general_recipes = []
+        
+        for recipe in enhanced_recipes:
+            # Check if recipe uses any expiry alert items
+            uses_expiry_items = False
+            for used_ing in recipe.get("usedIngredients", []):
+                if used_ing.get("inventory_id") in expiry_alert_inventory_ids:
+                    uses_expiry_items = True
+                    break
+            
+            if uses_expiry_items:
+                expiry_alert_recipes.append(recipe)
+            else:
+                general_recipes.append(recipe)
+        
+        # Sort each group by priority score (maintaining same sorting order)
+        expiry_alert_recipes.sort(
+            key=lambda x: (
+                x.get("priority_score", 0),
+                x.get("usedIngredientCount", 0),
+                x.get("items_expiring_soon", 0)
+            ),
+            reverse=True
+        )
+        
+        general_recipes.sort(
+            key=lambda x: (
+                x.get("priority_score", 0),
+                x.get("usedIngredientCount", 0),
+                x.get("items_expiring_soon", 0)
+            ),
+            reverse=True
+        )
+        
+        # Limit each group to 5 recipes
+        expiry_alert_recipes = expiry_alert_recipes[:5]
+        general_recipes = general_recipes[:5]
+        
+        # Combine: expiry alert recipes first, then general recipes
+        enhanced_recipes = expiry_alert_recipes + general_recipes
+        
+        print(f"DEBUG: Final recipe count - {len(expiry_alert_recipes)} expiry alert recipes (shown first) + {len(general_recipes)} general recipes = {len(enhanced_recipes)} total")
         
         return {
             "success": True,

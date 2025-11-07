@@ -250,14 +250,59 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             error_data = response.json() if response.content else {}
             error_message = error_data.get("error", {}).get("message", "Unknown error")
             error_code = error_data.get("error", {}).get("code", "Unknown")
-            print(f"ERROR: Failed to send WhatsApp message. Status: {response.status_code}, Error: {error_message}, Code: {error_code}")
+            error_subcode = error_data.get("error", {}).get("error_subcode", "")
+            
+            print(f"ERROR: Failed to send WhatsApp message. Status: {response.status_code}, Error: {error_message}, Code: {error_code}, Subcode: {error_subcode}")
             print(f"ERROR: Full error data: {error_data}")
+            
+            # Check if template doesn't exist (error code 132000 or message contains "template")
+            template_not_found = (
+                error_code == 132000 or 
+                "template" in error_message.lower() or 
+                error_subcode == 132000
+            )
+            
+            # If template doesn't exist and we're not already using hello_world, fall back to hello_world
+            if template_not_found and template_name != "hello_world":
+                print(f"WARNING: Template '{template_name}' not found or not approved. Falling back to 'hello_world' template.")
+                print(f"INFO: Please create the '{template_name}' template in Meta for Developers, or use hello_world for now.")
+                
+                # Retry with hello_world template
+                fallback_payload = {
+                    "messaging_product": "whatsapp",
+                    "to": whatsapp_phone,
+                    "type": "template",
+                    "template": {
+                        "name": "hello_world",
+                        "language": {
+                            "code": "en_US"
+                        }
+                    }
+                }
+                
+                try:
+                    fallback_response = requests.post(url, json=fallback_payload, headers=headers, timeout=10)
+                    if fallback_response.status_code == 200:
+                        fallback_data = fallback_response.json()
+                        fallback_message_id = fallback_data.get("messages", [{}])[0].get("id", "")
+                        print(f"SUCCESS: Sent message using hello_world template (fallback). Message ID: {fallback_message_id}")
+                        return {
+                            "status": True,
+                            "message": f"Message sent using hello_world template (fallback). Template '{template_name}' not found. Please create it in Meta for Developers.",
+                            "message_id": fallback_message_id,
+                            "wa_id": fallback_data.get("contacts", [{}])[0].get("wa_id", ""),
+                            "note": f"Template '{template_name}' not found. Created hello_world template used as fallback."
+                        }
+                except Exception as fallback_error:
+                    print(f"ERROR: Fallback to hello_world also failed: {str(fallback_error)}")
+            
             return {
                 "status": False,
                 "message": f"Failed to send WhatsApp alert: {error_message}",
                 "error_code": response.status_code,
                 "whatsapp_error_code": error_code,
-                "error_details": error_data
+                "error_details": error_data,
+                "template_not_found": template_not_found
             }
     except Exception as e:
         print(f"EXCEPTION: Error sending WhatsApp message: {str(e)}")
@@ -434,7 +479,7 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
             
             # Send all messages for this user
             for alert_type, message in messages:
-                # Use expiry_alert template for all expiry alerts
+                # Try expiry_alert template, but it will fall back to hello_world if template doesn't exist
                 result = send_whatsapp_message(user.phone_number, message, template_name="expiry_alert")
                 if result["status"]:
                     alerts_sent[alert_type] += 1
