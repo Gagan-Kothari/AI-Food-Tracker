@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../contexts/AuthContext"
 import { apiService } from "../services/api"
-import { BookOpenIcon, ClockIcon, UsersIcon } from "@heroicons/react/24/outline"
+import { BookOpenIcon, ClockIcon } from "@heroicons/react/24/outline"
 
 interface Recipe {
   id: number
@@ -12,6 +12,8 @@ interface Recipe {
   usedIngredientCount: number
   missedIngredientCount: number
   priorityScore?: number
+  prep_time?: number
+  cook_time?: number
   measurements?: string[]  // Measurements for Indian recipes
   usedIngredients: Array<{
     id: number
@@ -70,10 +72,13 @@ export default function Recipes() {
           return {
             id: recipe.id,
             title: recipe.title,
-            image: recipe.image || "/placeholder.svg",  // Use image from API, fallback to placeholder
+            image: recipe.image || "",  // Not used anymore, but keep for compatibility
             usedIngredientCount: recipe.usedIngredientCount || 0,
             missedIngredientCount: recipe.missedIngredientCount || 0,
             priorityScore: recipe.priority_score || 0,
+            prep_time: recipe.prep_time || 0,
+            cook_time: recipe.cook_time || 0,
+            measurements: recipe.measurements || [],
             usedIngredients: recipe.usedIngredients?.map((ing: any) => ({
               id: ing.id,
               name: ing.name,
@@ -236,64 +241,41 @@ export default function Recipes() {
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col h-full"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all hover:shadow-md flex flex-col h-full"
             >
-              <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
-                <img 
-                  src={recipe.image && recipe.image.startsWith('http') ? recipe.image : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"} 
-                  alt={recipe.title} 
-                  className="w-full h-full object-cover" 
-                  onError={(e) => {
-                    console.error(`Failed to load image for ${recipe.title}:`, recipe.image)
-                    // Fallback to Unsplash food placeholder (always works)
-                    const target = e.currentTarget
-                    if (!target.src.includes('unsplash.com')) {
-                      target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop"
-                    } else {
-                      // Final fallback - show a simple colored div with text
-                      target.style.display = 'none'
-                      const parent = target.parentElement
-                      if (parent && !parent.querySelector('.placeholder-text')) {
-                        const placeholder = document.createElement('div')
-                        placeholder.className = 'placeholder-text w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500'
-                        placeholder.textContent = '🍳 Recipe Image'
-                        parent.appendChild(placeholder)
-                      }
-                    }
-                  }}
-                  onLoad={() => {
-                    console.log(`Successfully loaded image for ${recipe.title}:`, recipe.image)
-                  }}
-                />
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-start justify-between mb-2 min-h-[3rem]">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex-1 pr-2">{recipe.title}</h3>
-                  {recipe.priorityScore && recipe.priorityScore > 0 ? (
-                    <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-                      recipe.priorityScore >= 10 
-                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
-                        : recipe.priorityScore >= 5 
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                    }`}>
-                      {recipe.priorityScore >= 10 ? 'High Priority' : recipe.priorityScore >= 5 ? 'Medium Priority' : 'Low Priority'}
-                    </span>
-                  ) : (
-                    <span className="w-0 h-0"></span>
-                  )}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{recipe.title}</h3>
+                    {recipe.priorityScore && recipe.priorityScore > 0 ? (
+                      <span className={`inline-block text-xs px-2 py-1 rounded-full ${
+                        recipe.priorityScore >= 10 
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
+                          : recipe.priorityScore >= 5 
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                      }`}>
+                        {recipe.priorityScore >= 10 ? 'High Priority' : recipe.priorityScore >= 5 ? 'Medium Priority' : 'Low Priority'}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center">
-                    <ClockIcon className="h-4 w-4 mr-1" />
-                    <span>30 min</span>
+                {((recipe.prep_time && recipe.prep_time > 0) || (recipe.cook_time && recipe.cook_time > 0)) && (
+                  <div className="flex items-center space-x-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    {recipe.prep_time && recipe.prep_time > 0 && (
+                      <div className="flex items-center">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        <span>Prep: {recipe.prep_time} min</span>
+                      </div>
+                    )}
+                    {recipe.cook_time && recipe.cook_time > 0 && (
+                      <div className="flex items-center">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        <span>Cook: {recipe.cook_time} min</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center">
-                    <UsersIcon className="h-4 w-4 mr-1" />
-                    <span>2-4 servings</span>
-                  </div>
-                </div>
+                )}
 
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2 min-h-[1.5rem]">
@@ -374,7 +356,7 @@ export default function Recipes() {
                   )}
                 </div>
 
-                <div className="mt-auto space-y-2 pt-4">
+                <div className="mt-auto space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => setSelectedRecipe(recipe)}
                     className="w-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
@@ -382,13 +364,15 @@ export default function Recipes() {
                     View Recipe
                   </button>
                   <button
-                    onClick={() => handleCookedRecipe()}
+                    onClick={() => {
+                      setSelectedRecipe(recipe)
+                      handleCookedRecipe()
+                    }}
                     className="w-full bg-green-600 dark:bg-green-500 hover:bg-green-700 dark:hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
                   >
                     I Cooked This!
                   </button>
                 </div>
-              </div>
             </div>
           ))}
         </div>
@@ -406,11 +390,6 @@ export default function Recipes() {
                 </button>
               </div>
 
-              <img
-                src={selectedRecipe.image || "/placeholder.svg"}
-                alt={selectedRecipe.title}
-                className="w-full h-64 object-cover rounded-lg mb-6"
-              />
 
               <div className="space-y-6">
                 <div>

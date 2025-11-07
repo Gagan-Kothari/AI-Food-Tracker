@@ -75,21 +75,25 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-1 relative">
             {navItems.map((item) => {
               const Icon = item.icon
+              const isActive = location.pathname === item.path
               return (
                 <Link
                   key={item.name}
                   to={item.path}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname === item.path
-                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30"
-                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  className={`relative flex items-center space-x-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ease-in-out ${
+                    isActive
+                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 scale-[1.02] shadow-sm"
+                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-[1.02]"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
+                  <Icon className={`w-5 h-5 transition-all duration-300 ${isActive ? 'scale-110 text-green-600 dark:text-green-400' : ''}`} />
+                  <span className="transition-all duration-300 font-medium">{item.name}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 dark:bg-green-400 rounded-full transform origin-left animate-slide-in"></span>
+                  )}
                 </Link>
               )
             })}
@@ -157,19 +161,20 @@ export default function Navbar() {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             {navItems.map((item) => {
               const Icon = item.icon
+              const isActive = location.pathname === item.path
               return (
                 <Link
                   key={item.name}
                   to={item.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
-                    location.pathname === item.path
-                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30"
-                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-all duration-300 ease-in-out ${
+                    isActive
+                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 transform scale-105"
+                      : "text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:scale-105"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
-                  <span>{item.name}</span>
+                  <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
+                  <span className="transition-all duration-300">{item.name}</span>
                 </Link>
               )
             })}
