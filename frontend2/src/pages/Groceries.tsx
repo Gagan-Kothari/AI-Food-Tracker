@@ -102,9 +102,9 @@ export default function Groceries() {
   const getGroceryStoreLinks = (itemName: string) => {
     const encodedName = encodeURIComponent(itemName)
     return {
-      blinkit: `https://blinkit.com/search?q=${encodedName}`,
-      zepto: `https://www.zeptonow.com/search?q=${encodedName}`,
-      flipkart: `https://www.flipkart.com/grocery/search?q=${encodedName}`,
+      blinkit: `https://blinkit.com/s/?q=${encodedName}`,
+      zepto: `https://www.zeptonow.com/s/?q=${encodedName}`,
+      instamart: `https://www.swiggy.com/instamart/search?query=${encodedName}`,
       amazon: `https://www.amazon.in/s?k=${encodedName}&i=grocery`
     }
   }
@@ -254,23 +254,17 @@ export default function Groceries() {
                     </div>
 
                     {/* Grocery Store Links - SEPARATE ROW, ALWAYS VISIBLE */}
-                    <div className="w-full mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
-                      {/* TEST: This red box should always be visible */}
-                      <div className="mb-2 p-2 bg-red-500 dark:bg-red-600 text-white font-bold text-center rounded">
-                        TEST: Store buttons should appear below this red box
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 p-5 rounded-xl border-4 border-blue-500 dark:border-blue-500 dark:border-opacity-70 shadow-2xl dark:shadow-blue-900/20">
-                        <div className="flex items-center gap-2 mb-4">
-                          <ShoppingCartIcon className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                          <p className="text-lg font-extrabold text-gray-900 dark:text-white">
-                            🛒 Buy from online stores:
+                    <div className="w-full mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="bg-gray-50/50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 mb-3">
+                          <ShoppingCartIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Buy from online stores:
                           </p>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           {Object.entries(getGroceryStoreLinks(item.name)).map(([store, url]) => {
                             const storeName = store.charAt(0).toUpperCase() + store.slice(1)
-                            console.log(`[GROCERIES] Rendering button: ${storeName} for ${item.name}`)
                             return (
                               <button
                                 key={`${item.id}-${store}`}
@@ -278,23 +272,12 @@ export default function Groceries() {
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  console.log(`[GROCERIES] CLICKED: ${storeName} for ${item.name} - ${url}`)
                                   window.open(url, '_blank', 'noopener,noreferrer')
                                 }}
-                                className="flex flex-col items-center justify-center gap-2 px-5 py-5 rounded-xl text-white font-extrabold text-base shadow-2xl hover:shadow-3xl transform hover:scale-110 active:scale-95 transition-all duration-200 min-h-[100px] cursor-pointer"
-                                style={{
-                                  backgroundColor: '#2563eb',
-                                  color: '#ffffff',
-                                  border: '4px solid #1d4ed8',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                                onMouseEnter={() => console.log(`[GROCERIES] Hover: ${storeName}`)}
+                                className="flex flex-col items-center justify-center gap-1.5 px-4 py-3 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium text-sm shadow-sm hover:shadow-md hover:bg-gray-50 dark:hover:bg-gray-600 transform hover:scale-105 active:scale-95 transition-all duration-200 min-h-[80px] cursor-pointer"
                               >
-                                <span style={{ fontSize: '18px', fontWeight: '900' }}>{storeName}</span>
-                                <ArrowTopRightOnSquareIcon className="w-6 h-6" style={{ color: 'white' }} />
+                                <span className="text-xs font-semibold">{storeName}</span>
+                                <ArrowTopRightOnSquareIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                               </button>
                             )
                           })}
