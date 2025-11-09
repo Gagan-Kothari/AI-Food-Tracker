@@ -2,6 +2,7 @@
 WhatsApp expiry alerts using Official WhatsApp Business API (Meta)
 """
 import os
+import re
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -133,6 +134,14 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             # Custom templates are created with "English" language, which is 'en' code
             language_code = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en")  # Default to 'en' for custom templates
             
+            # Sanitize message for WhatsApp template parameters
+            # WhatsApp doesn't allow newlines, tabs, or more than 4 consecutive spaces in template parameters
+            sanitized_message = message.replace('\n', ' | ').replace('\t', ' ').replace('\r', '')
+            # Replace multiple consecutive spaces (more than 4) with single space
+            sanitized_message = re.sub(r' {5,}', ' ', sanitized_message)
+            # Remove any remaining problematic characters
+            sanitized_message = sanitized_message.strip()
+            
             payload = {
                 "messaging_product": "whatsapp",
                 "to": whatsapp_phone,
@@ -148,7 +157,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                             "parameters": [
                                 {
                                     "type": "text",
-                                    "text": message
+                                    "text": sanitized_message
                                 }
                             ]
                         }
