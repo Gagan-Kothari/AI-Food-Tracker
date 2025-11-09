@@ -20,6 +20,7 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
     """
     try:
         donated_count = 0
+        skipped_items = []
         
         for inventory_id in inventory_ids:
             # Check if the item belongs to the user
@@ -29,15 +30,36 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
             ).first()
             
             if not inventory_item:
+                print(f"DEBUG: Item {inventory_id} not found or doesn't belong to user {user_id}")
+                skipped_items.append(f"Item {inventory_id} not found")
                 continue
             
-            # Check if this item is already in FoodStatusLog
+            # Check if this item is already consumed or donated (but allow alert_sent items to be donated)
             existing_log = db.query(models.FoodStatusLog).filter(
-                models.FoodStatusLog.inventory_id == inventory_id
+                models.FoodStatusLog.inventory_id == inventory_id,
+                models.FoodStatusLog.status.in_(["consumed", "donated"])
             ).first()
             
-            if not existing_log:
-                # Move to FoodStatusLog with 'donated' status
+            if existing_log:
+                print(f"DEBUG: Item {inventory_id} already has status '{existing_log.status}', skipping donation")
+                skipped_items.append(f"Item {inventory_id} already {existing_log.status}")
+                continue
+            
+            # Check if there's an alert_sent log - if so, update it to donated
+            alert_log = db.query(models.FoodStatusLog).filter(
+                models.FoodStatusLog.inventory_id == inventory_id,
+                models.FoodStatusLog.status == "alert_sent"
+            ).first()
+            
+            if alert_log:
+                # Update existing alert_sent log to donated
+                alert_log.status = "donated"
+                alert_log.notes = "Donated to NGO (previously alerted)"
+                alert_log.timestamp = datetime.now()
+                print(f"DEBUG: Updated item {inventory_id} from alert_sent to donated")
+                donated_count += 1
+            else:
+                # Create new log entry with 'donated' status
                 food_status_log = models.FoodStatusLog(
                     inventory_id=inventory_id,
                     status="donated",
@@ -45,6 +67,7 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
                     timestamp=datetime.now()
                 )
                 db.add(food_status_log)
+                print(f"DEBUG: Created new donation log for item {inventory_id}")
                 donated_count += 1
         
         if donated_count > 0:
@@ -107,7 +130,14 @@ def donate_items(db: Session, inventory_ids: list, user_id: int):
                 "status": True
             }
         else:
-            return {"message": "No items were donated", "donated_count": 0, "status": False}
+            error_msg = "No items were donated"
+            if skipped_items:
+                error_msg += f". Reasons: {', '.join(skipped_items[:3])}"  # Show first 3 reasons
+            print(f"DEBUG: Donation failed - {error_msg}")
+            return {"message": error_msg, "donated_count": 0, "status": False, "skipped_items": skipped_items}
             
     except Exception as e:
+        print(f"ERROR: Exception in donate_items: {str(e)}")
+        import traceback
+        print(f"ERROR: Traceback: {traceback.format_exc()}")
         return {"message": "Failed to donate items", "error": str(e), "status": False}
