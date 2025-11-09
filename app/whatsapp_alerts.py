@@ -25,6 +25,7 @@ def format_phone_number(phone: str) -> str:
     """
     Format phone number for WhatsApp API
     Phone should be in E.164 format: +1234567890
+    Automatically detects and adds country code for Indian numbers if missing
     """
     if not phone:
         print("WARNING: Empty phone number provided")
@@ -44,8 +45,19 @@ def format_phone_number(phone: str) -> str:
         # If it starts with 0, remove it (common in some countries)
         if phone.startswith("0"):
             phone = phone[1:]
-        # Add + prefix
-        phone = "+" + phone
+        
+        # Auto-detect Indian numbers (10 digits starting with 6-9)
+        # If it's a 10-digit number starting with 6-9, assume it's Indian (+91)
+        if len(phone) == 10 and phone[0] in ['6', '7', '8', '9']:
+            phone = "+91" + phone
+            print(f"DEBUG: Detected Indian number, added country code +91")
+        # If it's 11 digits and starts with 91 (without +), it's already Indian
+        elif len(phone) == 11 and phone.startswith("91"):
+            phone = "+" + phone
+        # Otherwise, just add + prefix (user should provide country code)
+        else:
+            phone = "+" + phone
+            print(f"DEBUG: Added + prefix. If number is incorrect, ensure country code is included.")
     
     print(f"DEBUG: Formatted phone number: '{phone}'")
     return phone

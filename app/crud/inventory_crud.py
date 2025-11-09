@@ -63,7 +63,8 @@ def add_to_database(db: Session, data, expirydate, user_id):
 
 def user_inventory(userid: int, db, foodstatus, inventory):
     """
-    Get user's inventory items that haven't been logged in FoodStatusLog.
+    Get user's inventory items that haven't been consumed, donated, or expired.
+    Items with 'alert_sent' status are still shown in inventory.
     
     Args:
         userid: User ID
@@ -79,10 +80,13 @@ def user_inventory(userid: int, db, foodstatus, inventory):
         expired_result = check_and_move_expired_items(db, userid)
         print(f"Expired items check: {expired_result}")
         
-        # Subquery to get inventory IDs that are already logged in FoodStatusLog
-        subquery = db.query(foodstatus.inventory_id).subquery()
+        # Subquery to get inventory IDs that are consumed, donated, or expired (these should be hidden)
+        # Items with 'alert_sent' status should still be visible
+        subquery = db.query(foodstatus.inventory_id).filter(
+            foodstatus.status.in_(["consumed", "donated", "expired"])
+        ).subquery()
 
-        # Main query to fetch unlogged inventory items with food item details
+        # Main query to fetch inventory items that are not consumed, donated, or expired
         results = (
             db.query(inventory, models.Food_Items)
             .join(models.Food_Items, inventory.f_id == models.Food_Items.f_id)
@@ -230,7 +234,7 @@ def add_food_item_to_database(db: Session, barcode: str, f_name: str, brands: st
 def check_and_move_expired_items(db: Session, user_id: int = None):
     """
     Check for expired items and automatically move them to FoodStatusLog with 'expired' status.
-    Items are considered expired when the current date is greater than the expiry date.
+    Items are considered expired when the expiry date is before today (not including today).
     If user_id is provided, only check that user's items. Otherwise, check all users.
     
     Args:
@@ -242,10 +246,12 @@ def check_and_move_expired_items(db: Session, user_id: int = None):
     """
     try:
         today = datetime.now().date()  # Get today's date only (without time)
+        today_start = datetime.combine(today, datetime.min.time())  # Today at 00:00:00
         
-        # Query for expired items - compare dates only
+        # Query for expired items - only items that expired BEFORE today (not today)
+        # This prevents items expiring today from being marked as expired
         query = db.query(models.Inventory).filter(
-            models.Inventory.expiry_date < datetime.combine(today, datetime.min.time())
+            models.Inventory.expiry_date < today_start
         )
         
         if user_id is not None:
