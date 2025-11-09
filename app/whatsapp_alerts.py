@@ -382,15 +382,24 @@ def get_items_for_alerts(db: Session, user_id: int = None):
         ).all()
         consumed_donated_ids = {row[0] for row in consumed_donated_ids_query}
         
-        # Filter out consumed/donated items
+        # Get inventory IDs that already have alerts sent
+        alert_sent_ids_query = db.query(models.FoodStatusLog.inventory_id).filter(
+            models.FoodStatusLog.status == "alert_sent"
+        ).all()
+        alert_sent_ids = {row[0] for row in alert_sent_ids_query}
+        
+        # Filter out consumed/donated items and items that already have alerts sent
         items_to_check = [
             item for item in all_items 
-            if item.id not in consumed_donated_ids
+            if item.id not in consumed_donated_ids and item.id not in alert_sent_ids
         ]
         
         yellow_items = []  # Expiring in 7 days
         red_items = []      # Expiring in 3 days
-        grey_items = []     # Expired
+        grey_items = []     # Expired (only within last 1 day)
+        
+        # Calculate threshold for expired items (only alert for items expired within last 1 day)
+        one_day_ago = today - timedelta(days=1)
         
         for item in items_to_check:
             expiry_date = item.expiry_date.date() if item.expiry_date else None
@@ -400,8 +409,10 @@ def get_items_for_alerts(db: Session, user_id: int = None):
             days_until_expiry = (expiry_date - today).days
             
             if expiry_date < today:
-                # Expired
-                grey_items.append(item)
+                # Expired - only include if expired within the last 1 day (not older)
+                if expiry_date >= one_day_ago:
+                    grey_items.append(item)
+                # Skip items expired more than 1 day ago
             elif expiry_date <= red_threshold:
                 # Expiring in 3 days or less
                 red_items.append(item)
@@ -474,7 +485,7 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
             print(f"DEBUG: Sending alerts to user {uid} (phone: {user.phone_number})")
             print(f"DEBUG: Alert counts - Yellow: {len(items['yellow'])}, Red: {len(items['red'])}, Grey: {len(items['grey'])}")
             
-            # Build messages for each alert type
+            # Build messages for each alert type, tracking items for each alert
             messages = []
             
             if items["yellow"]:
@@ -488,7 +499,7 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     days_left = (item.expiry_date.date() - datetime.now().date()).days if item.expiry_date else 0
                     food_name = food_item.f_name if food_item and food_item.f_name else "Unknown"
                     yellow_msg += f"• {food_name} - Expires: {expiry_date} ({days_left} days left)\n"
-                messages.append(("yellow", yellow_msg))
+                messages.append(("yellow", yellow_msg, items["yellow"]))
             
             if items["red"]:
                 red_msg = "🔴 RED ALERT: Items expiring in 3 days:\n"
@@ -501,7 +512,7 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     days_left = (item.expiry_date.date() - datetime.now().date()).days if item.expiry_date else 0
                     food_name = food_item.f_name if food_item and food_item.f_name else "Unknown"
                     red_msg += f"• {food_name} - Expires: {expiry_date} ({days_left} days left)\n"
-                messages.append(("red", red_msg))
+                messages.append(("red", red_msg, items["red"]))
             
             if items["grey"]:
                 grey_msg = "⚫ GREY ALERT: Items have expired:\n"
@@ -513,14 +524,45 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     expiry_date = item.expiry_date.strftime("%Y-%m-%d") if item.expiry_date else "N/A"
                     food_name = food_item.f_name if food_item and food_item.f_name else "Unknown"
                     grey_msg += f"• {food_name} - Expired: {expiry_date}\n"
-                messages.append(("grey", grey_msg))
+                messages.append(("grey", grey_msg, items["grey"]))
             
-            # Send all messages for this user
-            for alert_type, message in messages:
+            # Send all messages for this user and track which items were alerted
+            for alert_type, message, items_for_alert in messages:
+                
                 # Try expiry_alert template, but it will fall back to hello_world if template doesn't exist
                 result = send_whatsapp_message(user.phone_number, message, template_name="expiry_alert")
                 if result["status"]:
                     alerts_sent[alert_type] += 1
+                    
+                    # Mark all items in this alert as "alert_sent" in FoodStatusLog
+                    for item in items_for_alert:
+                        try:
+                            # Check if alert_sent status already exists for this item
+                            existing_alert = db.query(models.FoodStatusLog).filter(
+                                models.FoodStatusLog.inventory_id == item.id,
+                                models.FoodStatusLog.status == "alert_sent"
+                            ).first()
+                            
+                            if not existing_alert:
+                                # Create new alert_sent log entry
+                                alert_log = models.FoodStatusLog(
+                                    inventory_id=item.id,
+                                    status="alert_sent",
+                                    notes=f"Expiry alert sent for {alert_type} alert type",
+                                    timestamp=datetime.now()
+                                )
+                                db.add(alert_log)
+                                print(f"DEBUG: Marked item {item.id} as alert_sent for {alert_type} alert")
+                        except Exception as e:
+                            print(f"ERROR: Failed to mark item {item.id} as alert_sent: {str(e)}")
+                            # Don't fail the alert sending if marking fails
+                    
+                    # Commit the alert_sent statuses
+                    try:
+                        db.commit()
+                    except Exception as e:
+                        print(f"ERROR: Failed to commit alert_sent statuses: {str(e)}")
+                        db.rollback()
                 else:
                     alerts_sent["failed"] += 1
                 
