@@ -109,14 +109,11 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
         if template_name is None:
             template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "expiry_alert")  # Default to expiry_alert instead of hello_world
         
-        # Get language code (can be overridden via environment variable)
-        language_code = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US")
-        
         # Build template payload
-        # For hello_world: no components needed (fixed message)
-        # For custom templates: include components with message body
+        # For hello_world: no components needed (fixed message), uses en_US
+        # For custom templates: include components with message body, uses en
         if template_name == "hello_world":
-            # Use hello_world template (fixed message, no custom content)
+            # Use hello_world template (fixed message, no custom content) - uses en_US
             payload = {
                 "messaging_product": "whatsapp",
                 "to": whatsapp_phone,
@@ -132,7 +129,9 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             print(f"DEBUG: Original message was: {message[:100]}...")
             print(f"WARNING: hello_world template has fixed content. Create custom templates for actual messages.")
         else:
-            # Use custom template with message body as parameter
+            # Use custom template with message body as parameter - uses 'en' (English) not 'en_US'
+            # Custom templates are created with "English" language, which is 'en' code
+            language_code = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en")  # Default to 'en' for custom templates
             
             payload = {
                 "messaging_product": "whatsapp",
@@ -280,8 +279,28 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                     print(f"INFO: Check in Meta for Developers what language your template was created with.")
                     print(f"INFO: Common language codes: 'en_US', 'en', 'en_GB'. Try setting WHATSAPP_TEMPLATE_LANGUAGE environment variable.")
                     
-                    # Try with 'en' if we used 'en_US', or vice versa
-                    if language_code == "en_US" and template_name != "hello_world":
+                    # Try with 'en_US' if we used 'en', or vice versa (for backwards compatibility)
+                    if language_code == "en" and template_name != "hello_world":
+                        print(f"INFO: Attempting retry with language code 'en_US' in case template was created with that...")
+                        retry_payload = payload.copy()
+                        retry_payload["template"]["language"]["code"] = "en_US"
+                        
+                        try:
+                            retry_response = requests.post(url, json=retry_payload, headers=headers, timeout=10)
+                            if retry_response.status_code == 200:
+                                retry_data = retry_response.json()
+                                retry_message_id = retry_data.get("messages", [{}])[0].get("id", "")
+                                print(f"SUCCESS: Template worked with language code 'en_US'! Message ID: {retry_message_id}")
+                                return {
+                                    "status": True,
+                                    "message": f"Message sent using template '{template_name}' with language 'en_US'",
+                                    "message_id": retry_message_id,
+                                    "wa_id": retry_data.get("contacts", [{}])[0].get("wa_id", ""),
+                                    "note": "Template language was 'en_US' not 'en'."
+                                }
+                        except Exception as retry_error:
+                            print(f"ERROR: Retry with 'en_US' also failed: {str(retry_error)}")
+                    elif language_code == "en_US" and template_name != "hello_world":
                         print(f"INFO: Attempting retry with language code 'en' instead of 'en_US'...")
                         retry_payload = payload.copy()
                         retry_payload["template"]["language"]["code"] = "en"
@@ -297,7 +316,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                                     "message": f"Message sent using template '{template_name}' with language 'en'",
                                     "message_id": retry_message_id,
                                     "wa_id": retry_data.get("contacts", [{}])[0].get("wa_id", ""),
-                                    "note": "Template language was 'en' not 'en_US'. Consider setting WHATSAPP_TEMPLATE_LANGUAGE=en"
+                                    "note": "Template language was 'en' not 'en_US'."
                                 }
                         except Exception as retry_error:
                             print(f"ERROR: Retry with 'en' also failed: {str(retry_error)}")
@@ -312,7 +331,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                 "error_code": response.status_code,
                 "whatsapp_error_code": error_code,
                 "error_details": error_data,
-                "template_not_found": template_not_found
+                "template_error": template_error
             }
     except Exception as e:
         print(f"EXCEPTION: Error sending WhatsApp message: {str(e)}")
