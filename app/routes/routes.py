@@ -206,7 +206,8 @@ async def test_whatsapp_route(request: UserIdRequest, db: Session = Depends(get_
         return {"status": False, "message": f"User has no phone number. Current value: {user.phone_number}"}
     
     test_message = "🧪 Test message from AI Food Tracker!\n\nIf you received this, your WhatsApp integration is working correctly! ✅"
-    result = send_whatsapp_message(user.phone_number, test_message, template_name="hello_world")
+    # Use expiry_alert template (approved template) instead of hello_world
+    result = send_whatsapp_message(user.phone_number, test_message, template_name="expiry_alert")
     
     return {
         "status": result.get("status", False),

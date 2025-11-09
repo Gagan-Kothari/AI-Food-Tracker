@@ -107,7 +107,10 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
         
         # Check if we have a custom template name (parameter, then environment variable, then default)
         if template_name is None:
-            template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "hello_world")
+            template_name = os.getenv("WHATSAPP_TEMPLATE_NAME", "expiry_alert")  # Default to expiry_alert instead of hello_world
+        
+        # Get language code (can be overridden via environment variable)
+        language_code = os.getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US")
         
         # Build template payload
         # For hello_world: no components needed (fixed message)
@@ -130,6 +133,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             print(f"WARNING: hello_world template has fixed content. Create custom templates for actual messages.")
         else:
             # Use custom template with message body as parameter
+            
             payload = {
                 "messaging_product": "whatsapp",
                 "to": whatsapp_phone,
@@ -137,7 +141,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                 "template": {
                     "name": template_name,
                     "language": {
-                        "code": "en_US"
+                        "code": language_code
                     },
                     "components": [
                         {
@@ -153,7 +157,9 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                 }
             }
             print(f"DEBUG: Using custom template: {template_name}")
+            print(f"DEBUG: Language code: {language_code}")
             print(f"DEBUG: Message content: {message[:100]}...")
+            print(f"DEBUG: Template payload structure: name='{template_name}', language='{language_code}', has body component with 1 parameter")
         
         print(f"DEBUG: WhatsApp API URL: {url}")
         print(f"DEBUG: Full URL matches test template format: https://graph.facebook.com/{WHATSAPP_API_VERSION}/{WHATSAPP_PHONE_NUMBER_ID}/messages")
@@ -213,9 +219,11 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             contact_info = response_data.get("contacts", [{}])[0] if response_data.get("contacts") else {}
             wa_id = contact_info.get("wa_id", "")
             
-            print(f"SUCCESS: WhatsApp message sent. Message ID: {message_id}")
+            print(f"SUCCESS: WhatsApp message sent using template '{template_name}'")
+            print(f"SUCCESS: Message ID: {message_id}")
             print(f"SUCCESS: WhatsApp ID (wa_id): {wa_id}")
             print(f"SUCCESS: Contact info: {contact_info}")
+            print(f"SUCCESS: Template used: {template_name} (should match your approved template in Meta)")
             
             # Check if the phone number was recognized by WhatsApp
             if not wa_id:
@@ -255,46 +263,48 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             print(f"ERROR: Failed to send WhatsApp message. Status: {response.status_code}, Error: {error_message}, Code: {error_code}, Subcode: {error_subcode}")
             print(f"ERROR: Full error data: {error_data}")
             
-            # Check if template doesn't exist (error code 132000 or message contains "template")
-            template_not_found = (
+            # Check for template-related errors
+            # 132000 = Template not found
+            # 132001 = Template doesn't exist in the specified language translation
+            template_error = (
                 error_code == 132000 or 
-                "template" in error_message.lower() or 
-                error_subcode == 132000
+                error_code == 132001 or
+                error_subcode == 132000 or
+                error_subcode == 132001
             )
             
-            # If template doesn't exist and we're not already using hello_world, fall back to hello_world
-            if template_not_found and template_name != "hello_world":
-                print(f"WARNING: Template '{template_name}' not found or not approved. Falling back to 'hello_world' template.")
-                print(f"INFO: Please create the '{template_name}' template in Meta for Developers, or use hello_world for now.")
-                
-                # Retry with hello_world template
-                fallback_payload = {
-                    "messaging_product": "whatsapp",
-                    "to": whatsapp_phone,
-                    "type": "template",
-                    "template": {
-                        "name": "hello_world",
-                        "language": {
-                            "code": "en_US"
-                        }
-                    }
-                }
-                
-                try:
-                    fallback_response = requests.post(url, json=fallback_payload, headers=headers, timeout=10)
-                    if fallback_response.status_code == 200:
-                        fallback_data = fallback_response.json()
-                        fallback_message_id = fallback_data.get("messages", [{}])[0].get("id", "")
-                        print(f"SUCCESS: Sent message using hello_world template (fallback). Message ID: {fallback_message_id}")
-                        return {
-                            "status": True,
-                            "message": f"Message sent using hello_world template (fallback). Template '{template_name}' not found. Please create it in Meta for Developers.",
-                            "message_id": fallback_message_id,
-                            "wa_id": fallback_data.get("contacts", [{}])[0].get("wa_id", ""),
-                            "note": f"Template '{template_name}' not found. Created hello_world template used as fallback."
-                        }
-                except Exception as fallback_error:
-                    print(f"ERROR: Fallback to hello_world also failed: {str(fallback_error)}")
+            if template_error:
+                if error_code == 132001:
+                    print(f"ERROR: Template '{template_name}' exists but not in language '{language_code}' (Error 132001).")
+                    print(f"INFO: The template might be created with a different language code.")
+                    print(f"INFO: Check in Meta for Developers what language your template was created with.")
+                    print(f"INFO: Common language codes: 'en_US', 'en', 'en_GB'. Try setting WHATSAPP_TEMPLATE_LANGUAGE environment variable.")
+                    
+                    # Try with 'en' if we used 'en_US', or vice versa
+                    if language_code == "en_US" and template_name != "hello_world":
+                        print(f"INFO: Attempting retry with language code 'en' instead of 'en_US'...")
+                        retry_payload = payload.copy()
+                        retry_payload["template"]["language"]["code"] = "en"
+                        
+                        try:
+                            retry_response = requests.post(url, json=retry_payload, headers=headers, timeout=10)
+                            if retry_response.status_code == 200:
+                                retry_data = retry_response.json()
+                                retry_message_id = retry_data.get("messages", [{}])[0].get("id", "")
+                                print(f"SUCCESS: Template worked with language code 'en'! Message ID: {retry_message_id}")
+                                return {
+                                    "status": True,
+                                    "message": f"Message sent using template '{template_name}' with language 'en'",
+                                    "message_id": retry_message_id,
+                                    "wa_id": retry_data.get("contacts", [{}])[0].get("wa_id", ""),
+                                    "note": "Template language was 'en' not 'en_US'. Consider setting WHATSAPP_TEMPLATE_LANGUAGE=en"
+                                }
+                        except Exception as retry_error:
+                            print(f"ERROR: Retry with 'en' also failed: {str(retry_error)}")
+                else:
+                    print(f"ERROR: Template '{template_name}' not found or not approved (Error {error_code}).")
+                    print(f"INFO: Please verify the template name '{template_name}' matches exactly in Meta for Developers.")
+                    print(f"INFO: Check that the template is approved and the name is case-sensitive.")
             
             return {
                 "status": False,
