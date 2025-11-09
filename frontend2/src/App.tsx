@@ -63,7 +63,7 @@ function AppContent() {
   const { user } = useAuth()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50/20 to-blue-50/30 dark:from-gray-900 dark:via-green-900/10 dark:to-blue-900/10 transition-colors">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50/50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
       {user && !user.isAdmin && <Navbar />}
       <main className={user && !user.isAdmin ? "pt-16" : ""}>
         <Routes>

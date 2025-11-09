@@ -88,13 +88,13 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="bg-gradient-to-r from-white via-green-50/30 to-white dark:from-gray-800 dark:via-green-900/20 dark:to-gray-800 shadow-lg fixed top-0 left-0 right-0 z-50 transition-colors backdrop-blur-sm border-b border-green-100/50 dark:border-green-800/30">
+    <nav className="bg-gradient-to-r from-white via-green-50/20 to-white dark:from-gray-800 dark:via-green-900/10 dark:to-gray-800 shadow-lg fixed top-0 left-0 right-0 z-50 transition-colors border-b border-green-100/30 dark:border-green-800/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 rounded-lg flex items-center justify-center shadow-md">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-lg flex items-center justify-center shadow-sm">
                 <span className="text-white font-bold text-lg">🍎</span>
               </div>
               <span className="text-xl font-bold text-gray-800 dark:text-white">FoodTracker</span>
@@ -108,7 +108,7 @@ export default function Navbar() {
           >
             {/* Sliding Background Indicator */}
             <div
-              className="absolute h-10 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/30 rounded-lg transition-all duration-500 ease-in-out pointer-events-none shadow-sm"
+              className="absolute h-10 bg-green-50 dark:bg-green-900/30 rounded-lg transition-all duration-500 ease-in-out pointer-events-none"
               style={{
                 left: `${indicatorStyle.left}px`,
                 width: `${indicatorStyle.width}px`,
@@ -118,7 +118,7 @@ export default function Navbar() {
             
             {/* Sliding Underline Indicator */}
             <div
-              className="absolute bottom-0 h-0.5 bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-400 rounded-full transition-all duration-500 ease-in-out pointer-events-none"
+              className="absolute bottom-0 h-0.5 bg-green-600 dark:bg-green-400 rounded-full transition-all duration-500 ease-in-out pointer-events-none"
               style={{
                 left: `${indicatorStyle.left}px`,
                 width: `${indicatorStyle.width}px`,
@@ -165,7 +165,7 @@ export default function Navbar() {
               )}
             </button>
             {/* Points Display */}
-            <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/30 px-3 py-2 rounded-lg shadow-sm border border-yellow-200/50 dark:border-yellow-800/30">
+            <div className="flex items-center space-x-2 bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 rounded-lg">
               <span className="text-yellow-600 dark:text-yellow-400 text-lg">🪙</span>
               <span className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">{userPoints} points</span>
             </div>
@@ -175,7 +175,7 @@ export default function Navbar() {
             </div>
             <button
               onClick={handleLogout}
-              className="bg-gradient-to-r from-red-500 to-rose-600 dark:from-red-600 dark:to-rose-700 hover:from-red-600 hover:to-rose-700 dark:hover:from-red-700 dark:hover:to-rose-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+              className="bg-red-500 dark:bg-red-600 hover:bg-red-600 dark:hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
             >
               Logout
             </button>

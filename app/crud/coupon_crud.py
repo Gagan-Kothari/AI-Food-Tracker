@@ -122,10 +122,11 @@ def claim_coupon(db: Session, user_id: int, coupon_id: int):
         db.commit()
         db.refresh(claim)
         
-        # Send WhatsApp notification
+        # Send WhatsApp notification using coupon_alert template
         try:
             phone_number = user.phone_number
             if phone_number:
+                # Format message for coupon_alert template: "AI Based Grocery Recommendation: {{1}}. End of message"
                 message = f"🎉 Congratulations! You've successfully claimed a {coupon.name} coupon!\n\n"
                 message += f"Coupon Code: {coupon_code}\n"
                 message += f"Discount: {coupon.discount}\n"
@@ -135,7 +136,7 @@ def claim_coupon(db: Session, user_id: int, coupon_id: int):
                 send_whatsapp_message(
                     to_phone=phone_number,
                     message=message,
-                    template_name="coupon_claimed"
+                    template_name="coupon_alert"
                 )
         except Exception as e:
             print(f"Error sending WhatsApp notification: {str(e)}")

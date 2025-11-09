@@ -233,11 +233,14 @@ export default function Donate() {
           }
         }, 1000)
       } else {
-        setError("Failed to donate items: " + response.data.message)
+        const errorMsg = response.data.message || response.data.error || "Failed to donate items"
+        setError(errorMsg)
+        console.error("Donation failed:", response.data)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error donating items:", error)
-      setError("Failed to donate items. Please try again.")
+      const errorMsg = error?.response?.data?.message || error?.response?.data?.error || error?.message || "Failed to donate items. Please try again."
+      setError(errorMsg)
     } finally {
       setDonating(false)
       // Reset selections
