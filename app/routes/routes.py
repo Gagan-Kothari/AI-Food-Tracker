@@ -404,6 +404,16 @@ async def manual_add_item(payload: ManualFoodItemRequest, db: Session = Depends(
         db.add(inventory_item)
         db.commit()
         
+        # Send expiry alerts automatically when new item is added manually
+        try:
+            from app.whatsapp_alerts import send_expiry_alerts
+            print(f"DEBUG: Manual item added for user {payload.userid}, checking for expiry alerts...")
+            alert_result = send_expiry_alerts(db, int(payload.userid))
+            print(f"DEBUG: Expiry alerts result after manual add: {alert_result}")
+        except Exception as e:
+            print(f"DEBUG: Error sending expiry alerts after manual add: {str(e)}")
+            # Don't fail item addition if alerts fail
+        
         return {"message": "Item added successfully", "status": True, "source": "manual"}
     except Exception as e:
         return {"message": f"Failed to add to inventory: {str(e)}", "status": False}
