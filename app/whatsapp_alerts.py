@@ -3,6 +3,7 @@ WhatsApp expiry alerts using Official WhatsApp Business API (Meta)
 """
 import os
 import re
+import logging
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
@@ -10,6 +11,8 @@ from app.models import models
 import requests
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # WhatsApp Business API credentials - set these in your .env file
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
@@ -28,10 +31,10 @@ def format_phone_number(phone: str) -> str:
     Automatically detects and adds country code for Indian numbers if missing
     """
     if not phone:
-        print("WARNING: Empty phone number provided")
+        logger.warning("Empty phone number provided")
         return ""
     phone = phone.strip()
-    print(f"DEBUG: Formatting phone number. Original: '{phone}'")
+    logger.debug("Formatting phone number. Original: '%s'", phone)
     
     # Remove any existing whatsapp: prefix
     if phone.startswith("whatsapp:"):
@@ -50,16 +53,16 @@ def format_phone_number(phone: str) -> str:
         # If it's a 10-digit number starting with 6-9, assume it's Indian (+91)
         if len(phone) == 10 and phone[0] in ['6', '7', '8', '9']:
             phone = "+91" + phone
-            print(f"DEBUG: Detected Indian number, added country code +91")
+            logger.debug("Detected Indian number, added country code +91")
         # If it's 11 digits and starts with 91 (without +), it's already Indian
         elif len(phone) == 11 and phone.startswith("91"):
             phone = "+" + phone
         # Otherwise, just add + prefix (user should provide country code)
         else:
             phone = "+" + phone
-            print(f"DEBUG: Added + prefix. If number is incorrect, ensure country code is included.")
+            logger.debug("Added + prefix. If number is incorrect, ensure country code is included.")
     
-    print(f"DEBUG: Formatted phone number: '{phone}'")
+    logger.debug("Formatted phone number: '%s'", phone)
     return phone
 
 
@@ -76,20 +79,21 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
     """
     try:
         # Debug: Check if credentials are loaded
-        print(f"DEBUG: ========== WhatsApp API Call Debug ==========")
-        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN present: {bool(WHATSAPP_ACCESS_TOKEN)}")
-        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN length: {len(WHATSAPP_ACCESS_TOKEN) if WHATSAPP_ACCESS_TOKEN else 0}")
-        print(f"DEBUG: WHATSAPP_ACCESS_TOKEN first 20 chars: {WHATSAPP_ACCESS_TOKEN[:20] if WHATSAPP_ACCESS_TOKEN else 'None'}...")
-        print(f"DEBUG: WHATSAPP_PHONE_NUMBER_ID: {WHATSAPP_PHONE_NUMBER_ID}")
-        print(f"DEBUG: WHATSAPP_API_VERSION: {WHATSAPP_API_VERSION}")
+        logger.debug("========== WhatsApp API Call Debug ==========")
+        logger.debug("WHATSAPP_ACCESS_TOKEN present: %s", bool(WHATSAPP_ACCESS_TOKEN))
+        logger.debug("WHATSAPP_ACCESS_TOKEN length: %s", len(WHATSAPP_ACCESS_TOKEN) if WHATSAPP_ACCESS_TOKEN else 0)
+        logger.debug("WHATSAPP_ACCESS_TOKEN first 20 chars: %s...", WHATSAPP_ACCESS_TOKEN[:20] if WHATSAPP_ACCESS_TOKEN else 'None')
+        logger.debug("WHATSAPP_PHONE_NUMBER_ID: %s", WHATSAPP_PHONE_NUMBER_ID)
+        logger.debug("WHATSAPP_API_VERSION: %s", WHATSAPP_API_VERSION)
         
         if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
-            print("ERROR: WhatsApp credentials not configured")
-            print(f"ERROR: WHATSAPP_ACCESS_TOKEN = {WHATSAPP_ACCESS_TOKEN}")
-            print(f"ERROR: WHATSAPP_PHONE_NUMBER_ID = {WHATSAPP_PHONE_NUMBER_ID}")
+            logger.error("WhatsApp credentials not configured")
+            logger.error("WHATSAPP_ACCESS_TOKEN = %s", WHATSAPP_ACCESS_TOKEN)
+            logger.error("WHATSAPP_PHONE_NUMBER_ID = %s", WHATSAPP_PHONE_NUMBER_ID)
             return {
                 "status": False,
-                "message": "WhatsApp credentials not configured. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env"
+                "message": "WhatsApp credentials not configured. Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env",
+                "template_name": template_name
             }
         
         formatted_phone = format_phone_number(to_phone)
@@ -98,11 +102,11 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
         # Remove + if present (format: 919811546101 instead of +919811546101)
         whatsapp_phone = formatted_phone.lstrip('+')
         
-        print(f"DEBUG: Sending WhatsApp message to: {whatsapp_phone}")
-        print(f"DEBUG: Original phone number: {to_phone}")
-        print(f"DEBUG: Formatted (with +): {formatted_phone}")
-        print(f"DEBUG: WhatsApp format (no +): {whatsapp_phone}")
-        print(f"DEBUG: Message preview: {message[:50]}...")
+        logger.debug("Sending WhatsApp message to: %s", whatsapp_phone)
+        logger.debug("Original phone number: %s", to_phone)
+        logger.debug("Formatted (with +): %s", formatted_phone)
+        logger.debug("WhatsApp format (no +): %s", whatsapp_phone)
+        logger.debug("Message preview: %s...", message[:50] if message else "")
         
         # WhatsApp Cloud API endpoint
         url = f"{WHATSAPP_API_BASE_URL}/{WHATSAPP_PHONE_NUMBER_ID}/messages"
@@ -138,9 +142,9 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                     }
                 }
             }
-            print(f"DEBUG: Using hello_world template (test template - will send 'Hello World!' message)")
-            print(f"DEBUG: Original message was: {message[:100]}...")
-            print(f"WARNING: hello_world template has fixed content. Create custom templates for actual messages.")
+            logger.debug("Using hello_world template (test template - will send 'Hello World!' message)")
+            logger.debug("Original message was: %s...", message[:100] if message else "")
+            logger.warning("hello_world template has fixed content. Create custom templates for actual messages.")
         else:
             # Use custom template with message body as parameter - uses 'en' (English) not 'en_US'
             # Custom templates are created with "English" language, which is 'en' code
@@ -176,62 +180,65 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                     ]
                 }
             }
-            print(f"DEBUG: Using custom template: {template_name}")
-            print(f"DEBUG: Language code: {language_code}")
-            print(f"DEBUG: Message content: {message[:100]}...")
-            print(f"DEBUG: Template payload structure: name='{template_name}', language='{language_code}', has body component with 1 parameter")
+            logger.debug("Using custom template: %s", template_name)
+            logger.debug("Language code: %s", language_code)
+            logger.debug("Message content: %s...", message[:100] if message else "")
+            logger.debug("Template payload structure: name='%s', language='%s', has body component with 1 parameter", template_name, language_code)
         
-        print(f"DEBUG: WhatsApp API URL: {url}")
-        print(f"DEBUG: Full URL matches test template format: https://graph.facebook.com/{WHATSAPP_API_VERSION}/{WHATSAPP_PHONE_NUMBER_ID}/messages")
-        print(f"DEBUG: Payload (JSON): {payload}")
-        print(f"DEBUG: Headers (Authorization): Bearer {WHATSAPP_ACCESS_TOKEN[:20]}...")
+        logger.debug("WhatsApp API URL: %s", url)
+        logger.debug("Full URL matches test template format: https://graph.facebook.com/%s/%s/messages", WHATSAPP_API_VERSION, WHATSAPP_PHONE_NUMBER_ID)
+        logger.debug("Payload (JSON): %s", payload)
+        logger.debug("Headers (Authorization): Bearer %s...", WHATSAPP_ACCESS_TOKEN[:20])
         
         # Send request
-        print(f"DEBUG: ========== Sending Request ==========")
+        logger.debug("========== Sending Request ==========")
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=10)
         except requests.exceptions.RequestException as e:
-            print(f"ERROR: Request failed: {str(e)}")
+            logger.error("Request failed: %s", str(e))
             return {
                 "status": False,
-                "message": f"Failed to send request: {str(e)}"
+                "message": f"Failed to send request: {str(e)}",
+                "template_name": template_name
             }
         
-        print(f"DEBUG: Response status code: {response.status_code}")
-        print(f"DEBUG: Response headers: {dict(response.headers)}")
-        print(f"DEBUG: Response content: {response.text}")
+        logger.debug("Response status code: %s", response.status_code)
+        logger.debug("Response headers: %s", dict(response.headers))
+        logger.debug("Response content: %s", response.text)
         
         # Check for token expiration warnings
         if 'x-ad-api-version-warning' in response.headers:
             warning = response.headers.get('x-ad-api-version-warning', '')
-            print(f"WARNING: API version warning: {warning}")
-            print(f"WARNING: Consider updating WHATSAPP_API_VERSION environment variable to v24.0")
+            logger.warning("API version warning: %s", warning)
+            logger.warning("Consider updating WHATSAPP_API_VERSION environment variable to v24.0")
         
         # Check for authentication errors in response
         if response.status_code == 401:
-            print(f"ERROR: Authentication failed. Access token may be expired or invalid.")
-            print(f"ERROR: Generate a new access token from Meta for Developers and update Railway variables.")
+            logger.error("Authentication failed. Access token may be expired or invalid.")
+            logger.error("Generate a new access token from Meta for Developers and update Railway variables.")
             return {
                 "status": False,
                 "message": "Authentication failed. Access token may be expired. Please generate a new token.",
-                "error_code": 401
+                "error_code": 401,
+                "template_name": template_name
             }
         
         # Check for rate limiting
         if response.status_code == 429:
-            print(f"ERROR: Rate limit exceeded. Wait before sending more messages.")
+            logger.error("Rate limit exceeded. Wait before sending more messages.")
             return {
                 "status": False,
-                "message": "Rate limit exceeded. Please wait before sending more messages."
+                "message": "Rate limit exceeded. Please wait before sending more messages.",
+                "template_name": template_name
             }
         
         # Compare with test template
-        print(f"DEBUG: ========== Comparison with Test Template ==========")
-        print(f"DEBUG: Test template URL: https://graph.facebook.com/v22.0/903484642839290/messages")
-        print(f"DEBUG: Our URL: {url}")
-        print(f"DEBUG: Test template 'to': '919811546101'")
-        print(f"DEBUG: Our 'to': '{whatsapp_phone}'")
-        print(f"DEBUG: Match: {'✅ MATCH' if whatsapp_phone == '919811546101' else '❌ MISMATCH'}")
+        logger.debug("========== Comparison with Test Template ==========")
+        logger.debug("Test template URL: https://graph.facebook.com/v22.0/903484642839290/messages")
+        logger.debug("Our URL: %s", url)
+        logger.debug("Test template 'to': '919811546101'")
+        logger.debug("Our 'to': '%s'", whatsapp_phone)
+        logger.debug("Match: %s", "MATCH" if whatsapp_phone == "919811546101" else "MISMATCH")
         
         if response.status_code == 200:
             response_data = response.json()
@@ -239,32 +246,33 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             contact_info = response_data.get("contacts", [{}])[0] if response_data.get("contacts") else {}
             wa_id = contact_info.get("wa_id", "")
             
-            print(f"SUCCESS: WhatsApp message sent using template '{template_name}'")
-            print(f"SUCCESS: Message ID: {message_id}")
-            print(f"SUCCESS: WhatsApp ID (wa_id): {wa_id}")
-            print(f"SUCCESS: Contact info: {contact_info}")
-            print(f"SUCCESS: Template used: {template_name} (should match your approved template in Meta)")
+            logger.info("WhatsApp message sent using template '%s'", template_name)
+            logger.info("Message ID: %s", message_id)
+            logger.info("WhatsApp ID (wa_id): %s", wa_id)
+            logger.info("Contact info: %s", contact_info)
+            logger.info("Template used: %s (should match your approved template in Meta)", template_name)
             
             # Check if the phone number was recognized by WhatsApp
             if not wa_id:
-                print(f"ERROR: WhatsApp did not return a wa_id. This means:")
-                print(f"  - The number is NOT registered with WhatsApp")
-                print(f"  - The number is NOT added as a test number in Meta")
-                print(f"  - The phone number format is incorrect")
+                logger.error("WhatsApp did not return a wa_id. This means:")
+                logger.error("  - The number is NOT registered with WhatsApp")
+                logger.error("  - The number is NOT added as a test number in Meta")
+                logger.error("  - The phone number format is incorrect")
                 return {
                     "status": False,
                     "message": "Phone number not recognized by WhatsApp. Verify the number is added as a test number in Meta.",
-                    "wa_id": None
+                    "wa_id": None,
+                    "template_name": template_name
                 }
             else:
-                print(f"INFO: Message accepted by WhatsApp API (Message ID: {message_id})")
-                print(f"INFO: WhatsApp ID (wa_id): {wa_id} - Number is recognized ✅")
-                print(f"INFO: If message not received, check in this order:")
-                print(f"  1. Meta Business Suite: https://business.facebook.com/inbox (check delivery status)")
-                print(f"  2. Access token expiration (temporary tokens expire in 24 hours)")
-                print(f"  3. WhatsApp spam/archived messages on your phone")
-                print(f"  4. Wait 1-2 minutes for delivery (can be delayed)")
-                print(f"  5. Verify test number is correctly added in Meta for Developers")
+                logger.info("Message accepted by WhatsApp API (Message ID: %s)", message_id)
+                logger.info("WhatsApp ID (wa_id): %s - Number is recognized", wa_id)
+                logger.info("If message not received, check in this order:")
+                logger.info("  1. Meta Business Suite: https://business.facebook.com/inbox (check delivery status)")
+                logger.info("  2. Access token expiration (temporary tokens expire in 24 hours)")
+                logger.info("  3. WhatsApp spam/archived messages on your phone")
+                logger.info("  4. Wait 1-2 minutes for delivery (can be delayed)")
+                logger.info("  5. Verify test number is correctly added in Meta for Developers")
             
             return {
                 "status": True,
@@ -272,6 +280,7 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                 "message_id": message_id,
                 "wa_id": wa_id,
                 "contact_info": contact_info,
+                "template_name": template_name,
                 "note": "If message not received, check WhatsApp spam/archived or verify access token hasn't expired"
             }
         else:
@@ -280,8 +289,8 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             error_code = error_data.get("error", {}).get("code", "Unknown")
             error_subcode = error_data.get("error", {}).get("error_subcode", "")
             
-            print(f"ERROR: Failed to send WhatsApp message. Status: {response.status_code}, Error: {error_message}, Code: {error_code}, Subcode: {error_subcode}")
-            print(f"ERROR: Full error data: {error_data}")
+            logger.error("Failed to send WhatsApp message. Status: %s, Error: %s, Code: %s, Subcode: %s", response.status_code, error_message, error_code, error_subcode)
+            logger.error("Full error data: %s", error_data)
             
             # Check for template-related errors
             # 132000 = Template not found
@@ -295,14 +304,14 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
             
             if template_error:
                 if error_code == 132001:
-                    print(f"ERROR: Template '{template_name}' exists but not in language '{language_code}' (Error 132001).")
-                    print(f"INFO: The template might be created with a different language code.")
-                    print(f"INFO: Check in Meta for Developers what language your template was created with.")
-                    print(f"INFO: Common language codes: 'en_US', 'en', 'en_GB'. Try setting WHATSAPP_TEMPLATE_LANGUAGE environment variable.")
+                    logger.error("Template '%s' exists but not in language '%s' (Error 132001).", template_name, language_code)
+                    logger.info("The template might be created with a different language code.")
+                    logger.info("Check in Meta for Developers what language your template was created with.")
+                    logger.info("Common language codes: 'en_US', 'en', 'en_GB'. Try setting WHATSAPP_TEMPLATE_LANGUAGE environment variable.")
                     
                     # Try with 'en_US' if we used 'en', or vice versa (for backwards compatibility)
                     if language_code == "en" and template_name != "hello_world":
-                        print(f"INFO: Attempting retry with language code 'en_US' in case template was created with that...")
+                        logger.info("Attempting retry with language code 'en_US' in case template was created with that...")
                         retry_payload = payload.copy()
                         retry_payload["template"]["language"]["code"] = "en_US"
                         
@@ -311,18 +320,19 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                             if retry_response.status_code == 200:
                                 retry_data = retry_response.json()
                                 retry_message_id = retry_data.get("messages", [{}])[0].get("id", "")
-                                print(f"SUCCESS: Template worked with language code 'en_US'! Message ID: {retry_message_id}")
+                                logger.info("Template worked with language code 'en_US'! Message ID: %s", retry_message_id)
                                 return {
                                     "status": True,
                                     "message": f"Message sent using template '{template_name}' with language 'en_US'",
                                     "message_id": retry_message_id,
                                     "wa_id": retry_data.get("contacts", [{}])[0].get("wa_id", ""),
+                                    "template_name": template_name,
                                     "note": "Template language was 'en_US' not 'en'."
                                 }
                         except Exception as retry_error:
-                            print(f"ERROR: Retry with 'en_US' also failed: {str(retry_error)}")
+                            logger.error("Retry with 'en_US' also failed: %s", str(retry_error))
                     elif language_code == "en_US" and template_name != "hello_world":
-                        print(f"INFO: Attempting retry with language code 'en' instead of 'en_US'...")
+                        logger.info("Attempting retry with language code 'en' instead of 'en_US'...")
                         retry_payload = payload.copy()
                         retry_payload["template"]["language"]["code"] = "en"
                         
@@ -331,20 +341,21 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                             if retry_response.status_code == 200:
                                 retry_data = retry_response.json()
                                 retry_message_id = retry_data.get("messages", [{}])[0].get("id", "")
-                                print(f"SUCCESS: Template worked with language code 'en'! Message ID: {retry_message_id}")
+                                logger.info("Template worked with language code 'en'! Message ID: %s", retry_message_id)
                                 return {
                                     "status": True,
                                     "message": f"Message sent using template '{template_name}' with language 'en'",
                                     "message_id": retry_message_id,
                                     "wa_id": retry_data.get("contacts", [{}])[0].get("wa_id", ""),
+                                    "template_name": template_name,
                                     "note": "Template language was 'en' not 'en_US'."
                                 }
                         except Exception as retry_error:
-                            print(f"ERROR: Retry with 'en' also failed: {str(retry_error)}")
+                            logger.error("Retry with 'en' also failed: %s", str(retry_error))
                 else:
-                    print(f"ERROR: Template '{template_name}' not found or not approved (Error {error_code}).")
-                    print(f"INFO: Please verify the template name '{template_name}' matches exactly in Meta for Developers.")
-                    print(f"INFO: Check that the template is approved and the name is case-sensitive.")
+                    logger.error("Template '%s' not found or not approved (Error %s).", template_name, error_code)
+                    logger.info("Please verify the template name '%s' matches exactly in Meta for Developers.", template_name)
+                    logger.info("Check that the template is approved and the name is case-sensitive.")
             
             return {
                 "status": False,
@@ -352,15 +363,15 @@ def send_whatsapp_message(to_phone: str, message: str, template_name: str = None
                 "error_code": response.status_code,
                 "whatsapp_error_code": error_code,
                 "error_details": error_data,
-                "template_error": template_error
+                "template_error": template_error,
+                "template_name": template_name
             }
     except Exception as e:
-        print(f"EXCEPTION: Error sending WhatsApp message: {str(e)}")
-        import traceback
-        print(f"EXCEPTION: Traceback: {traceback.format_exc()}")
+        logger.exception("Error sending WhatsApp message: %s", str(e))
         return {
             "status": False,
-            "message": f"Failed to send WhatsApp alert: {str(e)}"
+            "message": f"Failed to send WhatsApp alert: {str(e)}",
+            "template_name": template_name
         }
 
 
@@ -446,6 +457,13 @@ def get_items_for_alerts(db: Session, user_id: int = None):
         }
 
 
+def _channel_outcome_notes(alert_type: str, succeeded: list, failed: list) -> str:
+    via = ", ".join(succeeded)
+    if failed:
+        return f"Expiry alert ({alert_type}) sent via: {via} ({', '.join(failed)} failed)"
+    return f"Expiry alert ({alert_type}) sent via: {via}"
+
+
 def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
     """
     Check expiry dates and send WhatsApp alerts to users
@@ -458,13 +476,18 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
         dict: Summary of alerts sent
     """
     try:
-        print(f"DEBUG: send_expiry_alerts called for user_id: {user_id}")
+        logger.debug("send_expiry_alerts called for user_id: %s", user_id)
         items_by_alert = get_items_for_alerts(db, user_id)
         
-        print(f"DEBUG: Items by alert type - Yellow: {len(items_by_alert.get('yellow', []))}, Red: {len(items_by_alert.get('red', []))}, Grey: {len(items_by_alert.get('grey', []))}")
+        logger.debug(
+            "Items by alert type - Yellow: %s, Red: %s, Grey: %s",
+            len(items_by_alert.get('yellow', [])),
+            len(items_by_alert.get('red', [])),
+            len(items_by_alert.get('grey', [])),
+        )
         
         if "error" in items_by_alert:
-            print(f"ERROR: Error getting items for alerts: {items_by_alert['error']}")
+            logger.error("Error getting items for alerts: %s", items_by_alert['error'])
             return {"status": False, "message": items_by_alert["error"]}
         
         alerts_sent = {
@@ -482,20 +505,33 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
                     user_items[item.u_id] = {"yellow": [], "red": [], "grey": []}
                 user_items[item.u_id][alert_type].append(item)
         
-        print(f"DEBUG: Found {len(user_items)} user(s) with items needing alerts")
+        logger.debug("Found %s user(s) with items needing alerts", len(user_items))
         
         # Send alerts to each user
         for uid, items in user_items.items():
             user = db.query(models.Users).filter(models.Users.id == uid).first()
             if not user:
-                print(f"DEBUG: User {uid} not found in database")
+                logger.debug("User %s not found in database", uid)
                 continue
-            if not user.phone_number:
-                print(f"DEBUG: User {uid} has no phone number. Phone: {user.phone_number}")
+
+            has_phone = bool(user.phone_number)
+            has_email = bool(user.email)
+            if not has_phone and not has_email:
+                logger.debug("User %s has neither phone number nor email; skipping", uid)
                 continue
             
-            print(f"DEBUG: Sending alerts to user {uid} (phone: {user.phone_number})")
-            print(f"DEBUG: Alert counts - Yellow: {len(items['yellow'])}, Red: {len(items['red'])}, Grey: {len(items['grey'])}")
+            logger.debug(
+                "Sending alerts to user %s (phone: %s, email: %s)",
+                uid,
+                user.phone_number,
+                user.email,
+            )
+            logger.debug(
+                "Alert counts - Yellow: %s, Red: %s, Grey: %s",
+                len(items['yellow']),
+                len(items['red']),
+                len(items['grey']),
+            )
             
             # Build messages for each alert type, tracking items for each alert
             messages = []
@@ -540,54 +576,105 @@ def send_expiry_alerts(db: Session, user_id: int = None) -> dict:
             
             # Send all messages for this user and track which items were alerted
             for alert_type, message, items_for_alert in messages:
-                
-                # Try expiry_alert template, but it will fall back to hello_world if template doesn't exist
-                result = send_whatsapp_message(user.phone_number, message, template_name="expiry_alert")
-                if result["status"]:
+                succeeded = []
+                failed = []
+                whatsapp_ok = False
+                email_ok = False
+
+                if has_phone:
+                    result = send_whatsapp_message(user.phone_number, message, template_name="expiry_alert")
+                    used_hello_world = result.get("template_name") == "hello_world"
+                    # hello_world has fixed content and does not carry the expiry item list
+                    whatsapp_ok = bool(result.get("status")) and not used_hello_world
+                    if used_hello_world:
+                        logger.warning(
+                            "alert send attempt user_id=%s tier=%s channel=whatsapp success=%s reason=hello_world_omits_item_list",
+                            uid,
+                            alert_type,
+                            False,
+                        )
+                    else:
+                        logger.info(
+                            "alert send attempt user_id=%s tier=%s channel=whatsapp success=%s",
+                            uid,
+                            alert_type,
+                            whatsapp_ok,
+                        )
+                    if whatsapp_ok:
+                        succeeded.append("whatsapp")
+                    else:
+                        failed.append("whatsapp")
+                        if not result.get("status"):
+                            logger.error(
+                                "alert send attempt user_id=%s tier=%s channel=whatsapp success=%s error=%s",
+                                uid,
+                                alert_type,
+                                False,
+                                result.get("message"),
+                            )
+
+                if has_email:
+                    try:
+                        from app.email_service import send_notification_email
+                        email_subject = f"FoodTracker - {alert_type.upper()} Alert: Items Expiring Soon"
+                        email_result = send_notification_email(user.email, email_subject, message)
+                        email_ok = bool(email_result.get("status"))
+                        logger.info(
+                            "alert send attempt user_id=%s tier=%s channel=email success=%s",
+                            uid,
+                            alert_type,
+                            email_ok,
+                        )
+                        if email_ok:
+                            succeeded.append("email")
+                        else:
+                            failed.append("email")
+                            logger.error(
+                                "alert send attempt user_id=%s tier=%s channel=email success=%s error=%s",
+                                uid,
+                                alert_type,
+                                False,
+                                email_result.get("message"),
+                            )
+                    except Exception as e:
+                        failed.append("email")
+                        logger.error(
+                            "alert send attempt user_id=%s tier=%s channel=email success=%s error=%s",
+                            uid,
+                            alert_type,
+                            False,
+                            str(e),
+                        )
+
+                if succeeded:
                     alerts_sent[alert_type] += 1
-                    
-                    # Mark all items in this alert as "alert_sent" in FoodStatusLog
+                    notes = _channel_outcome_notes(alert_type, succeeded, failed)
                     for item in items_for_alert:
                         try:
-                            # Check if alert_sent status already exists for this item
                             existing_alert = db.query(models.FoodStatusLog).filter(
                                 models.FoodStatusLog.inventory_id == item.id,
                                 models.FoodStatusLog.status == "alert_sent"
                             ).first()
                             
                             if not existing_alert:
-                                # Create new alert_sent log entry
                                 alert_log = models.FoodStatusLog(
                                     inventory_id=item.id,
                                     status="alert_sent",
-                                    notes=f"Expiry alert sent for {alert_type} alert type",
+                                    notes=notes,
                                     timestamp=datetime.now()
                                 )
                                 db.add(alert_log)
-                                print(f"DEBUG: Marked item {item.id} as alert_sent for {alert_type} alert")
+                                logger.debug("Marked item %s as alert_sent for %s alert", item.id, alert_type)
                         except Exception as e:
-                            print(f"ERROR: Failed to mark item {item.id} as alert_sent: {str(e)}")
-                            # Don't fail the alert sending if marking fails
+                            logger.error("Failed to mark item %s as alert_sent: %s", item.id, str(e))
                     
-                    # Commit the alert_sent statuses
                     try:
                         db.commit()
                     except Exception as e:
-                        print(f"ERROR: Failed to commit alert_sent statuses: {str(e)}")
+                        logger.error("Failed to commit alert_sent statuses: %s", str(e))
                         db.rollback()
                 else:
                     alerts_sent["failed"] += 1
-                
-                # Send email notification alongside WhatsApp
-                if user.email:
-                    try:
-                        from app.email_service import send_notification_email
-                        email_subject = f"FoodTracker - {alert_type.upper()} Alert: Items Expiring Soon"
-                        email_result = send_notification_email(user.email, email_subject, message)
-                        if email_result.get("status"):
-                            print(f"DEBUG: Expiry alert email sent to {user.email}")
-                    except Exception as e:
-                        print(f"ERROR: Failed to send expiry alert email: {str(e)}")
         
         return {
             "status": True,
