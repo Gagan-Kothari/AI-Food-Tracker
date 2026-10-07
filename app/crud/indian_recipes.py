@@ -355,6 +355,35 @@ def get_ingredient_synonyms(ingredient: str) -> set:
     return synonyms
 
 
+def _indian_flour_type(name: str):
+    """Return a flour-category key, or None.
+
+    Bare ``flour`` is not a category. Classifying each string independently so
+    a hit on the recipe side cannot skip the inventory side (the old combined
+    loop did).
+    """
+    flour_categories = {
+        'wheat flour': ['wheat flour', 'whole wheat flour', 'wholewheat flour', 'wheatmeal'],
+        'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour', 'plain flour', 'white flour'],
+        'atta': ['atta', 'whole wheat atta', 'chakki atta'],
+        'wheat bran': ['wheat bran', 'bran'],
+        'semolina': ['semolina', 'sooji', 'rava', 'suji'],
+        'rice flour': ['rice flour', 'rice powder'],
+        'besan': ['besan', 'gram flour', 'chickpea flour', 'chana flour'],
+        'corn flour': ['corn flour', 'cornflour', 'cornstarch', 'corn starch'],
+        'ragi flour': ['ragi flour', 'finger millet flour', 'nachni flour'],
+    }
+    found = None
+    found_len = -1
+    for flour_name, variants in flour_categories.items():
+        for variant in variants:
+            if re.search(r'\b' + re.escape(variant) + r'\b', name):
+                if len(variant) > found_len:
+                    found = flour_name
+                    found_len = len(variant)
+    return found
+
+
 def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = True) -> bool:
     """
     Strict matching for Indian recipes using semantic synonyms.
@@ -374,6 +403,16 @@ def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = Tr
     # Exact match
     if recipe_ing == user_ing:
         return True
+
+    # Flour types before synonym overlap. get_ingredient_synonyms("flour")
+    # otherwise pulls in every *flour group and the old code returned True first.
+    if is_indian:
+        recipe_flour_type = _indian_flour_type(recipe_ing)
+        user_flour_type = _indian_flour_type(user_ing)
+        if recipe_flour_type and user_flour_type:
+            return recipe_flour_type == user_flour_type
+        if recipe_flour_type or user_flour_type:
+            return False
     
     # Get synonyms for both ingredients
     recipe_synonyms = get_ingredient_synonyms(recipe_ing)
@@ -402,48 +441,6 @@ def match_ingredient_strict(recipe_ing: str, user_ing: str, is_indian: bool = Tr
             return True
     
     if is_indian:
-        # For Indian recipes, be stricter about flour types
-        # Don't match different flour types (wheat flour != wheat bran)
-        flour_categories = {
-            'wheat flour': ['wheat flour', 'whole wheat flour', 'wholewheat flour', 'wheatmeal'],
-            'refined wheat flour': ['refined wheat flour', 'maida', 'all purpose flour', 'all-purpose flour', 'plain flour'],
-            'atta': ['atta', 'whole wheat atta'],
-            'wheat bran': ['wheat bran', 'bran'],  # Different from wheat flour!
-            'semolina': ['semolina', 'sooji', 'rava'],
-            'rice flour': ['rice flour'],
-            'besan': ['besan', 'gram flour', 'chickpea flour'],
-            'corn flour': ['corn flour', 'cornflour'],
-            'ragi flour': ['ragi flour', 'finger millet flour']
-        }
-        
-        # Check if either is a flour type
-        recipe_flour_type = None
-        user_flour_type = None
-        
-        for flour_name, variants in flour_categories.items():
-            for variant in variants:
-                # Use word boundary matching to avoid "wheat flour" matching "wheat bran"
-                if re.search(r'\b' + re.escape(variant) + r'\b', recipe_ing):
-                    recipe_flour_type = flour_name
-                    break
-                if re.search(r'\b' + re.escape(variant) + r'\b', user_ing):
-                    user_flour_type = flour_name
-                    break
-            if recipe_flour_type and user_flour_type:
-                break
-        
-        # If both are flours, they must be the same type
-        if recipe_flour_type and user_flour_type:
-            return recipe_flour_type == user_flour_type
-        
-        # If only one is a flour, don't match (e.g., "wheat flour" shouldn't match "flour")
-        if recipe_flour_type or user_flour_type:
-            return False
-        
-        # For non-flour items, check if they share synonyms
-        if recipe_synonyms.intersection(user_synonyms):
-            return True
-        
         # Allow partial match for non-flour items but be careful
         if user_ing in recipe_ing:
             if len(recipe_ing) - len(user_ing) <= 15:
